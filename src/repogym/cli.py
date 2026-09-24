@@ -11,6 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from repogym import __version__
+from repogym.comparison import generate_comparison
 from repogym.doctor import diagnose_task
 from repogym.exceptions import RepoGymError
 from repogym.grader import grade_submission
@@ -136,6 +137,23 @@ def report(
         console.print(rendered, markup=False)
     elif output is not None:
         console.print(f"Report written to {output}")
+
+
+@app.command()
+def compare(
+    run_a: Annotated[Path, typer.Argument(help="Baseline run directory.")],
+    run_b: Annotated[Path, typer.Argument(help="Comparison run directory.")],
+    format_name: Annotated[
+        Literal["terminal", "json"], typer.Option("--format", help="Comparison format.")
+    ] = "terminal",
+) -> None:
+    """Compare two persisted grading runs."""
+    try:
+        rendered = generate_comparison(run_a, run_b, format_name, console)
+    except RepoGymError as exc:
+        _fail(exc)
+    if rendered is not None:
+        console.print(rendered, markup=False)
 
 
 @app.command()
