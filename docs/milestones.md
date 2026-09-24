@@ -43,9 +43,9 @@ administrative metadata and intentionally sits after the final functional milest
 ## Milestone 4 — Security Hardening and Release Readiness
 
 - Start: `7fcbdd805a5845bf0077763263c9809f2f98d715`
-- End: `285167fd6b70551b40e23d4ab1ae5608d85cbdad`
-- 中文目标：加强 submission 预检、跨平台进程树终止、持久化路径脱敏与 HTML 安全，并使 README、架构、安全文档和 CI 与实现保持一致。
-- 验收命令：完整执行 `ruff check .`、`ruff format --check .`、`mypy src/repogym`、覆盖率测试、两个任务的 validate/verify/doctor、好坏 submission 比较与 HTML 报告检查。
+- End: `3dd6511cbed6bbb34c14fd18dfbb0da5b20391e2`
+- 中文目标：加强 submission 预检、跨平台进程树终止、持久化路径脱敏与 HTML 安全，并使 README、架构、安全文档和 CI 与实现保持一致。确保任务测试使用运行 RepoGym 的同一 Python 解释器，避免环境诊断与实际执行不一致。
+- 验收命令：完整执行 `ruff check .`、`ruff format --check .`、`mypy src/repogym`、覆盖率测试、解释器绑定相关测试、两个任务的 validate/verify/doctor、两个示例任务 verify、好坏 submission 比较与 HTML 报告检查，并确认正确 submission 获得 100 分。
 - Commits:
   - `7fcbdd805a5845bf0077763263c9809f2f98d715` — submission preflight auditing
   - `765cc69586253478adbc2d9bacf32e509ad326cb` — process-tree timeout cleanup
@@ -53,3 +53,4 @@ administrative metadata and intentionally sits after the final functional milest
   - `bc931cfa725dc12c34e5d9d8b869d60e2075595d` — documentation and CI alignment
   - `674a0e1ea40312c8330a151c80c7c27c036a7d06` — scoring and milestone acceptance details
   - `285167fd6b70551b40e23d4ab1ae5608d85cbdad` — Windows workspace-root redaction fix
+  - `3dd6511cbed6bbb34c14fd18dfbb0da5b20391e2` — bind generic Python task commands to the active interpreter and align doctor diagnostics
