@@ -38,7 +38,7 @@ dev = [
 repogym = "repogym.cli:app"
 
 [project.urls]
-Repository = "https://github.com/example/repogym"
+Repository = "https://github.com/chenwei217/RepoGym"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/repogym"]
@@ -66,4 +66,3 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 python_version = "3.11"
 strict = true
 packages = ["repogym"]
-

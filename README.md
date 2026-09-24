@@ -22,7 +22,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 RepoGym requires Python 3.11 or newer.
 
 ```bash
-git clone https://github.com/example/repogym.git
+git clone https://github.com/chenwei217/RepoGym.git
 cd repogym
 python -m pip install -e ".[dev]"
 repogym --help
@@ -156,4 +156,3 @@ Bug reports, task proposals, and focused pull requests are welcome. See
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
-
