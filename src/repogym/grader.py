@@ -13,6 +13,7 @@ from repogym.exceptions import SecurityError, ValidationError
 from repogym.executors.base import Executor
 from repogym.executors.local import LocalExecutor
 from repogym.models import GradeResult
+from repogym.reproducibility import task_fingerprint
 from repogym.scoring import score_correctness, score_quality, score_regression, score_scope
 from repogym.security import changed_paths, copy_tree_safe, file_manifest
 from repogym.testing import inject_tests, parse_test_counts, run_tests
@@ -35,6 +36,7 @@ def grade_submission(
     if not submission.is_dir():
         raise SecurityError(f"Submission directory does not exist: {submission}")
     task = validation.task
+    fingerprint = task_fingerprint(task_directory, task)
     runner = executor or LocalExecutor()
     run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
     run_dir = output_root.resolve() / run_id
@@ -86,6 +88,7 @@ def grade_submission(
             run_dir / "metadata.json",
             {
                 "created_at": datetime.now(UTC).isoformat(),
+                "task_fingerprint": fingerprint,
                 "task_directory": str(task_directory.resolve()),
                 "submission_directory": str(submission.resolve()),
                 "command": all_result.command,

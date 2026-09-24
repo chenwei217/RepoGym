@@ -58,6 +58,8 @@ def test_grades_correct_submission_and_writes_artifacts(tmp_path: Path) -> None:
     assert result.tests.passed == 8
     assert "8 passed" in stdout
     assert stderr == ""
+    metadata = json.loads((run_dir / "metadata.json").read_text(encoding="utf-8"))
+    assert len(metadata["task_fingerprint"]) == 64
     assert set(path.name for path in run_dir.iterdir()) == {
         "changed_files.json",
         "metadata.json",
