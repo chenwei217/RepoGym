@@ -2,7 +2,8 @@
 
 These ranges follow the real, immutable commit order. An earlier maintenance pass landed the
 first compare/evidence implementations before the later contract-completion commits; the ranges
-below preserve that history instead of rewriting it.
+below preserve that history instead of rewriting it. The commit that maintains this mapping is
+administrative metadata and intentionally sits after the final functional milestone boundary.
 
 ## Milestone 1 — Reproducible Task Evaluation Foundation
 
@@ -42,7 +43,7 @@ below preserve that history instead of rewriting it.
 ## Milestone 4 — Security Hardening and Release Readiness
 
 - Start: `7fcbdd805a5845bf0077763263c9809f2f98d715`
-- End: `bc931cfa725dc12c34e5d9d8b869d60e2075595d`
+- End: `285167fd6b70551b40e23d4ab1ae5608d85cbdad`
 - 中文目标：加强 submission 预检、跨平台进程树终止、持久化路径脱敏与 HTML 安全，并使 README、架构、安全文档和 CI 与实现保持一致。
 - 验收命令：完整执行 `ruff check .`、`ruff format --check .`、`mypy src/repogym`、覆盖率测试、两个任务的 validate/verify/doctor、好坏 submission 比较与 HTML 报告检查。
 - Commits:
@@ -50,3 +51,5 @@ below preserve that history instead of rewriting it.
   - `765cc69586253478adbc2d9bacf32e509ad326cb` — process-tree timeout cleanup
   - `526514009a9c44af82d6a189aa7147454d84b4ed` — unified redaction and escaping
   - `bc931cfa725dc12c34e5d9d8b869d60e2075595d` — documentation and CI alignment
+  - `674a0e1ea40312c8330a151c80c7c27c036a7d06` — scoring and milestone acceptance details
+  - `285167fd6b70551b40e23d4ab1ae5608d85cbdad` — Windows workspace-root redaction fix
