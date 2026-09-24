@@ -11,7 +11,9 @@ from repogym.security import (
     changed_paths,
     copy_tree_safe,
     file_manifest,
+    redact_known_paths,
     safe_join,
+    sanitize_command,
     validate_relative_path,
 )
 
@@ -79,3 +81,20 @@ def test_patch_rejects_context_mismatch(tmp_path: Path) -> None:
     (tmp_path / "x").write_text("actual\n", encoding="utf-8")
     with pytest.raises(PatchError, match="context mismatch"):
         apply_patch(tmp_path, "--- a/x\n+++ b/x\n@@ -1 +1 @@\n-wrong\n+new\n")
+
+
+def test_sanitizes_absolute_command_arguments() -> None:
+    command = sanitize_command(
+        ["python", "C:\\Users\\person\\tests.py", "--config=/home/person/config.toml"]
+    )
+    assert command == [
+        "python",
+        "<absolute-path>/tests.py",
+        "--config=<absolute-path>/config.toml",
+    ]
+
+
+def test_redacts_known_paths_from_output(tmp_path: Path) -> None:
+    local_file = tmp_path / "workspace" / "test.py"
+    output = f"failure in {local_file}"
+    assert str(tmp_path) not in redact_known_paths(output, [tmp_path])

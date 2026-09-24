@@ -56,10 +56,18 @@ def test_grades_correct_submission_and_writes_artifacts(tmp_path: Path) -> None:
     assert result.status == "completed"
     assert result.score == 100
     assert result.tests.passed == 8
+    assert result.execution is not None
+    assert result.execution.command == ["python", "-m", "pytest", "-q"]
+    assert result.execution.exit_code == 0
+    assert result.execution.timed_out is False
+    assert result.execution.test_statistics_source == "pytest_summary"
     assert "8 passed" in stdout
     assert stderr == ""
     metadata = json.loads((run_dir / "metadata.json").read_text(encoding="utf-8"))
     assert len(metadata["task_fingerprint"]) == 64
+    serialized_metadata = json.dumps(metadata)
+    assert str(ROOT) not in serialized_metadata
+    assert str(tmp_path) not in serialized_metadata
     assert set(path.name for path in run_dir.iterdir()) == {
         "changed_files.json",
         "metadata.json",

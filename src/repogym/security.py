@@ -69,3 +69,32 @@ def changed_paths(before: dict[str, str], after: dict[str, str]) -> list[str]:
     return sorted(
         path for path in before.keys() | after.keys() if before.get(path) != after.get(path)
     )
+
+
+def sanitize_command(command: list[str]) -> list[str]:
+    """Redact absolute path arguments while keeping commands reviewable."""
+
+    def sanitize(value: str) -> str:
+        prefix, separator, candidate = value.partition("=")
+        path_value = candidate if separator else value
+        posix = PurePosixPath(path_value)
+        windows = PureWindowsPath(path_value)
+        if not (posix.is_absolute() or windows.is_absolute() or windows.drive):
+            return value
+        name = windows.name if windows.is_absolute() or windows.drive else posix.name
+        replacement = f"<absolute-path>/{name}" if name else "<absolute-path>"
+        return f"{prefix}={replacement}" if separator else replacement
+
+    return [sanitize(argument) for argument in command]
+
+
+def redact_known_paths(text: str, paths: list[Path]) -> str:
+    """Replace known local roots in captured process output."""
+    redacted = text
+    replacements: set[str] = set()
+    for path in paths:
+        resolved = str(path.resolve())
+        replacements.update({resolved, resolved.replace("\\", "/")})
+    for value in sorted(replacements, key=len, reverse=True):
+        redacted = redacted.replace(value, "<local-path>")
+    return redacted

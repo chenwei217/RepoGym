@@ -93,6 +93,13 @@ class DimensionResult(BaseModel):
     reason: str
 
 
+class ExecutionEvidence(BaseModel):
+    command: list[str]
+    exit_code: int | None
+    timed_out: bool
+    test_statistics_source: Literal["pytest_summary"]
+
+
 class GradeResult(BaseModel):
     task_id: str
     run_id: str
@@ -102,3 +109,4 @@ class GradeResult(BaseModel):
     tests: TestCounts
     violations: list[str]
     duration_seconds: float
+    execution: ExecutionEvidence | None = None

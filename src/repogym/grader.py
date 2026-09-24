@@ -12,10 +12,16 @@ from typing import Literal
 from repogym.exceptions import SecurityError, ValidationError
 from repogym.executors.base import Executor
 from repogym.executors.local import LocalExecutor
-from repogym.models import GradeResult
+from repogym.models import ExecutionEvidence, GradeResult
 from repogym.reproducibility import task_fingerprint
 from repogym.scoring import score_correctness, score_quality, score_regression, score_scope
-from repogym.security import changed_paths, copy_tree_safe, file_manifest
+from repogym.security import (
+    changed_paths,
+    copy_tree_safe,
+    file_manifest,
+    redact_known_paths,
+    sanitize_command,
+)
 from repogym.testing import inject_tests, parse_test_counts, run_tests
 from repogym.validator import validate_task
 
@@ -80,18 +86,26 @@ def grade_submission(
             tests=all_counts,
             violations=violations,
             duration_seconds=round(all_result.duration_seconds, 3),
+            execution=ExecutionEvidence(
+                command=sanitize_command(all_result.command),
+                exit_code=all_result.return_code,
+                timed_out=all_result.timed_out,
+                test_statistics_source="pytest_summary",
+            ),
         )
-        (run_dir / "stdout.txt").write_text(all_result.stdout, encoding="utf-8")
-        (run_dir / "stderr.txt").write_text(all_result.stderr, encoding="utf-8")
+        sensitive_roots = [workspace, task_directory.resolve(), submission.resolve()]
+        safe_stdout = redact_known_paths(all_result.stdout, sensitive_roots)
+        safe_stderr = redact_known_paths(all_result.stderr, sensitive_roots)
+        (run_dir / "stdout.txt").write_text(safe_stdout, encoding="utf-8")
+        (run_dir / "stderr.txt").write_text(safe_stderr, encoding="utf-8")
         _write_json(run_dir / "changed_files.json", changed)
         _write_json(
             run_dir / "metadata.json",
             {
+                "schema_version": 1,
                 "created_at": datetime.now(UTC).isoformat(),
                 "task_fingerprint": fingerprint,
-                "task_directory": str(task_directory.resolve()),
-                "submission_directory": str(submission.resolve()),
-                "command": all_result.command,
+                "command": sanitize_command(all_result.command),
                 "return_code": all_result.return_code,
                 "timed_out": all_result.timed_out,
             },
