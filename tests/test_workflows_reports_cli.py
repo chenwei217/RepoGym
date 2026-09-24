@@ -34,6 +34,7 @@ def test_example_tasks_verify(task_name: str) -> None:
     report = verify_task(ROOT / "tasks" / task_name)
     assert report.fixed.return_code == 0
     assert report.patch_files
+    assert len(report.task_fingerprint) == 64
 
 
 def test_verify_rejects_forbidden_reference_patch(valid_task: Path) -> None:
@@ -54,6 +55,7 @@ def test_grades_correct_submission_and_writes_artifacts(tmp_path: Path) -> None:
     )
     result, stdout, stderr = load_run(run_dir)
     assert result.status == "completed"
+    assert result.task_fingerprint == metadata_fingerprint(run_dir)
     assert result.score == 100
     assert result.tests.passed == 8
     assert result.execution is not None
@@ -75,6 +77,13 @@ def test_grades_correct_submission_and_writes_artifacts(tmp_path: Path) -> None:
         "stderr.txt",
         "stdout.txt",
     }
+
+
+def metadata_fingerprint(run_dir: Path) -> str:
+    metadata = json.loads((run_dir / "metadata.json").read_text(encoding="utf-8"))
+    value = metadata["task_fingerprint"]
+    assert isinstance(value, str)
+    return value
 
 
 def test_bad_submission_loses_points(tmp_path: Path) -> None:

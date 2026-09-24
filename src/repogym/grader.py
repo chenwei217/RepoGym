@@ -79,6 +79,7 @@ def grade_submission(
         score = round(sum(item.score for item in dimensions.values()), 2)
         result = GradeResult(
             task_id=task.id,
+            task_fingerprint=fingerprint,
             run_id=run_id,
             status=status,
             score=max(0.0, min(100.0, score)),

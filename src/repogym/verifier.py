@@ -12,6 +12,7 @@ from repogym.executors.base import Executor
 from repogym.executors.local import LocalExecutor
 from repogym.models import ExecutionResult
 from repogym.patching import apply_patch, patch_paths
+from repogym.reproducibility import task_fingerprint
 from repogym.security import copy_tree_safe
 from repogym.testing import inject_tests, parse_test_counts, run_tests
 from repogym.validator import validate_task
@@ -20,6 +21,7 @@ from repogym.validator import validate_task
 @dataclass(frozen=True)
 class VerificationReport:
     task_id: str
+    task_fingerprint: str
     initial: ExecutionResult
     fixed: ExecutionResult
     patch_files: list[str]
@@ -38,6 +40,7 @@ def verify_task(task_directory: Path, executor: Executor | None = None) -> Verif
         raise ValidationError("Task validation failed:\n  - " + "\n  - ".join(validation.errors))
     task = validation.task
     task_dir = task_directory.resolve()
+    fingerprint = task_fingerprint(task_dir, task)
     patch_text = (task_dir / "reference" / "solution.patch").read_text(encoding="utf-8")
     paths = patch_paths(patch_text)
     forbidden = [
@@ -73,4 +76,4 @@ def verify_task(task_directory: Path, executor: Executor | None = None) -> Verif
                 "Reference passing count mismatch: "
                 f"expected {task.expected.passing_tests_after}, got {fixed_counts.passed}"
             )
-        return VerificationReport(task.id, initial, fixed, paths)
+        return VerificationReport(task.id, fingerprint, initial, fixed, paths)

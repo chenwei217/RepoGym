@@ -98,6 +98,7 @@ def verify(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> Non
     console.print("[green]PASS[/green] Starter produced the expected failures")
     console.print(f"[green]PASS[/green] Reference patch changed: {', '.join(report.patch_files)}")
     console.print("[green]PASS[/green] Reference solution passed all tests")
+    console.print(f"[green]PASS[/green] Task fingerprint: {report.task_fingerprint}")
     console.print(f"\n[bold green]Verification passed for {report.task_id}.[/bold green]")
     if _debug:
         console.print(initial_failed)

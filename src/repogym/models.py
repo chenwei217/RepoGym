@@ -102,6 +102,7 @@ class ExecutionEvidence(BaseModel):
 
 class GradeResult(BaseModel):
     task_id: str
+    task_fingerprint: str | None = None
     run_id: str
     status: Literal["completed", "timed_out", "error"]
     score: float
