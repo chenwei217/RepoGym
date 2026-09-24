@@ -1,5 +1,17 @@
 # Reproducibility
 
+## Current guarantees
+
+RepoGym fingerprints the complete task input surface, validates the bundled reference solution,
+and stores the fingerprint alongside structured execution evidence. A generic `python` or
+`python.exe` test command is resolved to the interpreter running RepoGym, which prevents an
+ambient `PATH` entry from changing the evaluator runtime. Reports redact local paths before they
+are persisted or rendered.
+
+The task directory remains the source artifact today. Portable package export/import, including a
+manifest and integrity verification, is tracked as the highest-priority follow-up in the
+[engineering roadmap](roadmap.md).
+
 `task_fingerprint()` computes a lowercase SHA-256 digest from the complete task input surface:
 
 - `task.yaml`;

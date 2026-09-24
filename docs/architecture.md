@@ -21,6 +21,11 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
 10. `reports` rehydrates `result.json` and renders terminal, JSON, or escaped HTML.
 11. `comparison` computes stable A-to-B deltas without re-executing either run.
 
+The public Python surface is intentionally small: `load_task`, `validate_task`, `verify_task`,
+`grade_submission`, report generation, and comparison are the supported orchestration entry
+points. The Typer CLI is a thin adapter over those services. Executor implementations conform to
+the `Executor` protocol; today only `LocalExecutor` is shipped.
+
 The configured test command is generic rather than pytest-specific, but the MVP count adapter
 parses pytest summary output. Public tests are run separately for regression scoring. Submission
 deletions are not represented by an overlay directory in the MVP; submissions add or replace
@@ -45,3 +50,12 @@ path order. Required inputs are `task.yaml`, prompt/description, `starter/`, pub
 tests, and `reference/solution.patch`. Missing inputs are an error. Length prefixes prevent
 ambiguous concatenation, ordering makes the digest stable, and byte-level hashing makes
 line-ending or encoding changes visible.
+
+## Current architectural boundaries
+
+Task definitions and run artifacts are versioned independently: `TaskSpec.version` describes a
+task contract, while result loading contains an explicit compatibility adapter for the original
+execution-evidence field name. There is not yet a general TaskSpec schema migration registry.
+Likewise, task inputs can be fingerprinted and verified in place, but they cannot yet be exported
+as a self-validating portable package. Those two limitations are tracked in the engineering
+roadmap rather than hidden behind unstable extension points.
