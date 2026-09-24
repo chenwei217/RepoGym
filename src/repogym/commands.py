@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shlex
+import sys
 
 from repogym.exceptions import ValidationError
 
@@ -19,4 +20,12 @@ def split_command(command: str) -> list[str]:
         ]
     if not parts:
         raise ValidationError("Test command must not be empty")
+    return parts
+
+
+def resolve_command(command: str) -> list[str]:
+    """Parse a task command and bind generic Python launchers to this runtime."""
+    parts = split_command(command)
+    if parts[0] in {"python", "python.exe"}:
+        parts[0] = sys.executable
     return parts

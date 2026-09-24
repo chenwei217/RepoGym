@@ -87,7 +87,7 @@ def test_grades_correct_submission_and_writes_artifacts(tmp_path: Path) -> None:
     assert result.score == 100
     assert result.tests.passed == 8
     assert result.execution is not None
-    assert result.execution.argv == ["python", "-m", "pytest", "-q"]
+    assert result.execution.argv == ["<ABSOLUTE_PATH>", "-m", "pytest", "-q"]
     assert result.execution.exit_code == 0
     assert result.execution.timed_out is False
     assert result.execution.duration_seconds >= 0

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,24 @@ from typer.testing import CliRunner
 
 from repogym.cli import app
 from repogym.doctor import diagnose_task
+from repogym.loader import load_task
+from repogym.models import ExecutionResult
+from repogym.testing import run_tests
+
+
+class RecordingExecutor:
+    def __init__(self) -> None:
+        self.command: list[str] = []
+
+    def execute(self, command: list[str], cwd: Path, timeout_seconds: int) -> ExecutionResult:
+        self.command = command
+        return ExecutionResult(
+            command=command,
+            return_code=0,
+            stdout="1 passed",
+            stderr="",
+            duration_seconds=0.1,
+        )
 
 
 def test_doctor_reports_healthy_environment(valid_task: Path) -> None:
@@ -24,6 +43,22 @@ def test_doctor_reports_healthy_environment(valid_task: Path) -> None:
         "task fingerprint",
     }
     assert all(check.status == "pass" for check in report.checks)
+
+
+def test_doctor_reports_the_same_interpreter_used_for_execution(
+    valid_task: Path, tmp_path: Path
+) -> None:
+    report = diagnose_task(valid_task)
+    command_check = next(check for check in report.checks if check.name == "test command")
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    executor = RecordingExecutor()
+
+    run_tests(load_task(valid_task), workspace, executor)
+
+    assert executor.command[0] == sys.executable
+    assert command_check.status == "pass"
+    assert sys.executable in command_check.message
 
 
 def test_doctor_reports_missing_executable(valid_task: Path) -> None:
@@ -112,6 +147,7 @@ def test_doctor_cli_normal_and_failure_paths(valid_task: Path, tmp_path: Path) -
     healthy = runner.invoke(app, ["doctor", str(valid_task)])
     assert healthy.exit_code == 0
     assert "PASS python version" in healthy.stdout
+    assert Path(sys.executable).name in healthy.stdout
     failed = runner.invoke(app, ["doctor", str(tmp_path / "missing")])
     assert failed.exit_code == 1
     assert "FAIL task definition" in failed.stdout

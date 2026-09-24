@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from repogym.commands import split_command
+from repogym.commands import resolve_command
 from repogym.exceptions import RepoGymError, SecurityError
 from repogym.reproducibility import task_fingerprint
 from repogym.security import safe_join
@@ -75,7 +75,7 @@ def diagnose_task(task_directory: Path) -> DoctorReport:
     )
 
     try:
-        command = split_command(task.execution.test_command)
+        command = resolve_command(task.execution.test_command)
     except RepoGymError as exc:
         checks.append(DiagnosticCheck("test command", "fail", str(exc)))
         command = []

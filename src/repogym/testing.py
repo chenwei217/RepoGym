@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from repogym.commands import split_command
+from repogym.commands import resolve_command
 from repogym.executors.base import Executor
 from repogym.models import ExecutionResult, TaskSpec, TestCounts
 from repogym.security import copy_tree_safe, safe_join
@@ -38,7 +38,7 @@ def run_tests(
     executor: Executor,
     selection: str | None = None,
 ) -> ExecutionResult:
-    command = split_command(task.execution.test_command)
+    command = resolve_command(task.execution.test_command)
     if selection is not None:
         command.append(selection)
     cwd = safe_join(workspace, task.execution.working_directory)

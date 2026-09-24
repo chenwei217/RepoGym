@@ -82,9 +82,14 @@ def doctor(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> Non
     styles = {"pass": "green", "warning": "yellow", "fail": "red"}
     labels = {"pass": "PASS", "warning": "WARN", "fail": "FAIL"}
     for check in report.checks:
+        message = (
+            check.message
+            if check.name == "test command"
+            else redact_sensitive_text(check.message, [task])
+        )
         console.print(
             f"[{styles[check.status]}]{labels[check.status]}[/] "
-            f"{escape(check.name)}: {escape(redact_sensitive_text(check.message, [task]))}"
+            f"{escape(check.name)}: {escape(message)}"
         )
     if not report.healthy:
         raise typer.Exit(1)

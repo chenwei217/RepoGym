@@ -14,6 +14,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - SHA-256 task fingerprints over every versioned task input, including the reference patch
 - Environment diagnostics for commands, dependencies, working directories, and test discovery
 - Temporary workspaces and a replaceable executor interface
+- Generic `python` task commands are bound to the interpreter running RepoGym
 - Deterministic correctness, regression, static-quality, and scope scores
 - Deterministic run-to-run comparison in terminal or JSON form
 - Terminal, JSON, and self-contained HTML reports
@@ -76,14 +77,15 @@ configured description, `starter/`, public and private tests, and `reference/sol
 Changing any of those inputs changes the fingerprint; mtimes and file creation order do not.
 
 Run `doctor` before a long evaluation to inspect the current environment. This output was
-captured from the bundled cache task; the Python patch version will reflect the local runtime:
+captured from the bundled cache task; the Python version and interpreter path will reflect the
+local runtime:
 
 ```text
 $ repogym doctor tasks/python-cache-ttl
 PASS task definition: Loaded python-cache-ttl.
 PASS starter project: Starter project directory exists.
 PASS python version: Python 3.14.4; requires 3.11+.
-PASS test command: Executable found: python
+PASS test command: Executable found: /path/to/venv/bin/python
 PASS dependencies: Python module available: pytest
 PASS working directory: Starter working directory exists: .
 PASS public test discovery: 4 public tests found.
@@ -92,6 +94,12 @@ PASS temporary directory: Temporary workspace is writable.
 PASS task fingerprint: Deterministic SHA-256:
 d92dfb7b7bc039787c17692ef75e74d20c8ddf0906c05efa78f2a95bac64ddb0
 ```
+
+When a task command starts with exactly `python` or `python.exe`, RepoGym replaces that first
+argument with `sys.executable`. Consequently, virtual-environment and pipx installations run
+tests with the same interpreter that runs RepoGym, even when another Python appears first on
+`PATH`. Explicit absolute Python paths, other interpreter names, and non-Python commands are
+left unchanged. Commands are always passed as argument lists with `shell=False`.
 
 ## Comparing runs
 

@@ -5,7 +5,8 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
 1. `loader` parses YAML into strict Pydantic models.
 2. `validator` checks layout, safe relative paths, test discovery, and constraint overlap.
 3. `doctor` inspects the local Python runtime, command, dependencies, working directory, and
-   discovered tests without executing candidate code.
+   discovered tests without executing candidate code. It uses the same resolved command as the
+   execution path and reports the executable it actually checked.
 4. `reproducibility` hashes every task input, including the reference patch, into a stable
    SHA-256 identity.
 5. `security` audits submission trees before copying, records content hashes, and applies the
@@ -25,6 +26,12 @@ parses pytest summary output. Public tests are run separately for regression sco
 deletions are not represented by an overlay directory in the MVP; submissions add or replace
 files. Reference patches deliberately support modifications only—file creation, deletion, and
 rename are excluded to keep the bundled applier small and auditable.
+
+Command resolution tokenizes the configured string once. An exact first token of `python` or
+`python.exe` is replaced with `sys.executable` before both doctor diagnostics and execution, so
+the two paths cannot select different Python installations through `PATH`. Absolute Python
+paths, alternate interpreter names, and all other commands retain their configured first token.
+The resolved argument vector is executed directly and never through a shell.
 
 `result.json` records the task fingerprint plus sanitized argv, exit code, timeout state,
 duration, `<WORKSPACE>` working directory, output filenames, termination diagnostics, and the
