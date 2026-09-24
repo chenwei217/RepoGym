@@ -1,0 +1,23 @@
+--- a/cachelib/cache.py
++++ b/cachelib/cache.py
+@@ -13,11 +13,17 @@
+         self._items: dict[K, tuple[V, float | None]] = {}
+ 
+     def set(self, key: K, value: V, ttl: float | None = None) -> None:
+-        expires_at = self._clock() + ttl if ttl else None
++        if ttl is not None and ttl <= 0:
++            self._items.pop(key, None)
++            return
++        expires_at = self._clock() + ttl if ttl is not None else None
+         self._items[key] = (value, expires_at)
+ 
+     def get(self, key: K) -> V:
+-        value, _expires_at = self._items[key]
++        value, expires_at = self._items[key]
++        if expires_at is not None and self._clock() >= expires_at:
++            del self._items[key]
++            raise KeyError(key)
+         return value
+ 
+     def delete(self, key: K) -> bool:
+

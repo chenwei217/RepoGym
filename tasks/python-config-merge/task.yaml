@@ -1,0 +1,33 @@
+id: python-config-merge
+title: Make configuration merging recursive and immutable
+difficulty: medium
+language: python
+version: "1.0"
+description_file: prompt.md
+
+execution:
+  timeout_seconds: 30
+  test_command: python -m pytest -q
+  working_directory: "."
+
+scoring:
+  correctness:
+    weight: 60
+  regression_safety:
+    weight: 20
+  code_quality:
+    weight: 10
+  scope_control:
+    weight: 10
+
+expected:
+  failing_tests_before: 5
+  passing_tests_after: 8
+
+constraints:
+  allowed_paths:
+    - configmerge/**
+    - tests/**
+  forbidden_paths:
+    - pyproject.toml
+    - repogym/**

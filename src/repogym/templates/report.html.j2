@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RepoGym report — {{ result.task_id }}</title>
+  <style>
+    :root { color-scheme: light dark; --accent: #326ce5; --muted: #687386; }
+    body { font: 16px/1.5 system-ui, sans-serif; max-width: 900px; margin: 3rem auto; padding: 0 1.5rem; }
+    header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid var(--accent); }
+    .score { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    table { width: 100%; border-collapse: collapse; margin: 2rem 0; }
+    th, td { text-align: left; padding: .7rem; border-bottom: 1px solid #8886; }
+    .meta { color: var(--muted); } pre { padding: 1rem; overflow: auto; background: #8882; }
+    .violation { color: #c43b3b; } details { margin: 1rem 0; }
+  </style>
+</head>
+<body>
+  <header><div><h1>{{ result.task_id }}</h1><p class="meta">Run {{ result.run_id }}</p></div><div class="score">{{ "%.2f"|format(result.score) }}/100</div></header>
+  <p>Status: <strong>{{ result.status }}</strong> · Tests: {{ result.tests.passed }}/{{ result.tests.total }} passed · Duration: {{ "%.3f"|format(result.duration_seconds) }}s</p>
+  <table><thead><tr><th>Dimension</th><th>Score</th><th>Reason</th></tr></thead><tbody>
+  {% for name, dimension in result.dimensions.items() %}<tr><td>{{ name }}</td><td>{{ "%.2f"|format(dimension.score) }}/{{ dimension.max_score }}</td><td>{{ dimension.reason }}</td></tr>{% endfor %}
+  </tbody></table>
+  <h2>Violations</h2>
+  {% if result.violations %}<ul>{% for violation in result.violations %}<li class="violation">{{ violation }}</li>{% endfor %}</ul>{% else %}<p>None.</p>{% endif %}
+  <details><summary>stdout</summary><pre>{{ stdout }}</pre></details>
+  <details><summary>stderr</summary><pre>{{ stderr }}</pre></details>
+</body>
+</html>
+
