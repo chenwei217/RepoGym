@@ -12,14 +12,20 @@ from rich.table import Table
 
 from repogym.exceptions import ReportError
 from repogym.models import GradeResult
+from repogym.security import redact_sensitive_text, redact_value
 
 
 def load_run(run_directory: Path) -> tuple[GradeResult, str, str]:
     try:
         raw: Any = json.loads((run_directory / "result.json").read_text(encoding="utf-8"))
-        result = GradeResult.model_validate(raw)
-        stdout = (run_directory / "stdout.txt").read_text(encoding="utf-8")
-        stderr = (run_directory / "stderr.txt").read_text(encoding="utf-8")
+        roots = [run_directory.resolve()]
+        result = GradeResult.model_validate(redact_value(raw, roots))
+        stdout = redact_sensitive_text(
+            (run_directory / "stdout.txt").read_text(encoding="utf-8"), roots
+        )
+        stderr = redact_sensitive_text(
+            (run_directory / "stderr.txt").read_text(encoding="utf-8"), roots
+        )
     except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
         raise ReportError(f"Invalid run directory {run_directory}: {exc}") from exc
     return result, stdout, stderr

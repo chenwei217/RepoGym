@@ -156,3 +156,20 @@ def test_compare_cli_writes_output_file(tmp_path: Path, format_name: str) -> Non
     assert result.exit_code == 0
     assert output.is_file()
     assert str(tmp_path) not in output.read_text(encoding="utf-8")
+
+
+def test_compare_redacts_absolute_paths_from_legacy_results(tmp_path: Path) -> None:
+    run_a = _write_run(tmp_path, "run-a", score=10, passed=1, duration=2, violations=[])
+    run_b = _write_run(
+        tmp_path,
+        "run-b",
+        score=20,
+        passed=2,
+        duration=1,
+        violations=[r"C:\Users\alice\x", "/home/alice/y"],
+    )
+    rendered = generate_comparison(run_a, run_b, "json")
+    assert rendered is not None
+    assert "C:\\Users" not in rendered
+    assert "/home/alice" not in rendered
+    assert "<ABSOLUTE_PATH>" in rendered

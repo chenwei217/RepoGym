@@ -21,6 +21,7 @@ from repogym.security import (
     copy_tree_safe,
     file_manifest,
     redact_known_paths,
+    redact_value,
     sanitize_command,
 )
 from repogym.testing import inject_tests, parse_test_counts, run_tests
@@ -81,8 +82,9 @@ def grade_submission(
         if all_result.return_code is None and not all_result.timed_out:
             status = "error"
         score = round(sum(item.score for item in dimensions.values()), 2)
+        sensitive_roots = [workspace, task_directory.resolve(), submission.resolve()]
         evidence = ExecutionEvidence(
-            argv=sanitize_command(all_result.command),
+            argv=sanitize_command(all_result.command, sensitive_roots),
             exit_code=all_result.return_code,
             timed_out=all_result.timed_out,
             duration_seconds=round(all_result.duration_seconds, 3),
@@ -104,23 +106,23 @@ def grade_submission(
             duration_seconds=round(all_result.duration_seconds, 3),
             execution=evidence,
         )
-        sensitive_roots = [workspace, task_directory.resolve(), submission.resolve()]
         safe_stdout = redact_known_paths(all_result.stdout, sensitive_roots)
         safe_stderr = redact_known_paths(all_result.stderr, sensitive_roots)
         (run_dir / "stdout.txt").write_text(safe_stdout, encoding="utf-8")
         (run_dir / "stderr.txt").write_text(safe_stderr, encoding="utf-8")
         _write_json(run_dir / "changed_files.json", changed)
+        metadata = {
+            "schema_version": 1,
+            "created_at": datetime.now(UTC).isoformat(),
+            "task_fingerprint": fingerprint,
+            "command": sanitize_command(all_result.command, sensitive_roots),
+            "return_code": all_result.return_code,
+            "timed_out": all_result.timed_out,
+            "execution": evidence.model_dump(mode="json"),
+        }
+        _write_json(run_dir / "metadata.json", redact_value(metadata, sensitive_roots))
         _write_json(
-            run_dir / "metadata.json",
-            {
-                "schema_version": 1,
-                "created_at": datetime.now(UTC).isoformat(),
-                "task_fingerprint": fingerprint,
-                "command": sanitize_command(all_result.command),
-                "return_code": all_result.return_code,
-                "timed_out": all_result.timed_out,
-                "execution": evidence.model_dump(mode="json"),
-            },
+            run_dir / "result.json",
+            redact_value(result.model_dump(mode="json"), sensitive_roots),
         )
-        _write_json(run_dir / "result.json", result.model_dump(mode="json"))
     return run_dir

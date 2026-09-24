@@ -12,6 +12,7 @@ from repogym.security import (
     copy_tree_safe,
     file_manifest,
     redact_known_paths,
+    redact_sensitive_text,
     safe_join,
     sanitize_command,
     validate_relative_path,
@@ -89,12 +90,25 @@ def test_sanitizes_absolute_command_arguments() -> None:
     )
     assert command == [
         "python",
-        "<absolute-path>/tests.py",
-        "--config=<absolute-path>/config.toml",
+        "<ABSOLUTE_PATH>",
+        "--config=<ABSOLUTE_PATH>",
     ]
 
 
 def test_redacts_known_paths_from_output(tmp_path: Path) -> None:
     local_file = tmp_path / "workspace" / "test.py"
     output = f"failure in {local_file}"
-    assert str(tmp_path) not in redact_known_paths(output, [tmp_path])
+    redacted = redact_known_paths(output, [tmp_path])
+    assert str(tmp_path) not in redacted
+    assert "<WORKSPACE>/workspace" in redacted
+
+
+def test_unified_redaction_handles_windows_unix_unicode_and_is_idempotent() -> None:
+    text = "C:\\Users\\alice\\秘密\\file.py /home/alice/项目/file.py relative/file.py"
+    once = redact_sensitive_text(text)
+    twice = redact_sensitive_text(once)
+    assert once == twice
+    assert "C:\\Users" not in once
+    assert "/home/alice" not in once
+    assert "relative/file.py" in once
+    assert once.count("<ABSOLUTE_PATH>") == 2

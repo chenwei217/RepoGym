@@ -8,6 +8,7 @@ from typing import Annotated, Literal
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from repogym import __version__
@@ -17,6 +18,7 @@ from repogym.exceptions import RepoGymError
 from repogym.grader import grade_submission
 from repogym.loader import load_task
 from repogym.reports import generate_report, load_run, render_terminal
+from repogym.security import redact_sensitive_text
 from repogym.validator import validate_task
 from repogym.verifier import verify_task
 
@@ -36,7 +38,7 @@ def _fail(exc: Exception) -> None:
     if _debug:
         traceback.print_exc()
     else:
-        error_console.print(f"[red]Error:[/red] {exc}")
+        error_console.print(f"[red]Error:[/red] {escape(redact_sensitive_text(str(exc)))}")
     raise typer.Exit(1)
 
 
@@ -68,7 +70,7 @@ def validate(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> N
         console.print(f"[green]PASS[/green] {check}")
     if report.errors:
         for error in report.errors:
-            error_console.print(f"[red]FAIL[/red] {error}")
+            error_console.print(f"[red]FAIL[/red] {escape(redact_sensitive_text(error, [task]))}")
         raise typer.Exit(1)
     console.print("\n[bold green]Validation passed.[/bold green]")
 
@@ -81,7 +83,8 @@ def doctor(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> Non
     labels = {"pass": "PASS", "warning": "WARN", "fail": "FAIL"}
     for check in report.checks:
         console.print(
-            f"[{styles[check.status]}]{labels[check.status]}[/] {check.name}: {check.message}"
+            f"[{styles[check.status]}]{labels[check.status]}[/] "
+            f"{escape(check.name)}: {escape(redact_sensitive_text(check.message, [task]))}"
         )
     if not report.healthy:
         raise typer.Exit(1)
@@ -116,7 +119,9 @@ def grade(
     except RepoGymError as exc:
         _fail(exc)
     render_terminal(result, console)
-    console.print(f"Run artifacts: [bold]{run_dir}[/bold]")
+    console.print(
+        f"Run artifacts: [bold]{escape(redact_sensitive_text(str(run_dir), [Path.cwd()]))}[/bold]"
+    )
 
 
 @app.command()
@@ -137,7 +142,7 @@ def report(
     if rendered is not None and output is None:
         console.print(rendered, markup=False)
     elif output is not None:
-        console.print(f"Report written to {output}")
+        console.print(f"Report written to {escape(redact_sensitive_text(str(output)))}")
 
 
 @app.command()
@@ -157,7 +162,7 @@ def compare(
     if rendered is not None and output is None:
         console.print(rendered, markup=False)
     elif output is not None:
-        console.print(f"Comparison written to {output}")
+        console.print(f"Comparison written to {escape(redact_sensitive_text(str(output)))}")
 
 
 @app.command()

@@ -5,16 +5,21 @@ from __future__ import annotations
 import fnmatch
 import hashlib
 import os
+import re
 import shutil
 import stat
 import unicodedata
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
+from typing import Any
 
 from repogym.exceptions import SecurityError
 from repogym.models import TaskSpec
 
 MAX_SUBMISSION_FILE_BYTES = 5 * 1024 * 1024
+WINDOWS_ABSOLUTE_PATH = re.compile(r"(?i)(?<![\w>])(?:[a-z]:[\\/]|\\\\)[^\s\"'<>]*")
+UNIX_ABSOLUTE_PATH = re.compile(r"(?<![:\w>])/(?:[A-Za-z_.-][^/\s\"'<>]*/)+[^\s\"'<>]*")
 
 
 @dataclass(frozen=True)
@@ -229,30 +234,49 @@ def changed_paths(before: dict[str, str], after: dict[str, str]) -> list[str]:
     )
 
 
-def sanitize_command(command: list[str]) -> list[str]:
-    """Redact absolute path arguments while keeping commands reviewable."""
+def redact_sensitive_text(text: str, sensitive_roots: Iterable[Path | str] = ()) -> str:
+    """Redact known workspaces and otherwise recognizable absolute filesystem paths."""
+    redacted = text
+    variants: set[str] = set()
+    for root in sensitive_roots:
+        value = str(root).rstrip("\\/")
+        if value:
+            variants.update({value, value.replace("\\", "/"), value.replace("/", "\\")})
+    for value in sorted(variants, key=len, reverse=True):
+        flags = re.IGNORECASE if PureWindowsPath(value).drive else 0
+        redacted = re.sub(
+            re.escape(value) + r"(?=$|[\\/])",
+            "<WORKSPACE>",
+            redacted,
+            flags=flags,
+        )
+    redacted = re.sub(
+        r"<WORKSPACE>(?:[\\/][^\s\"'<>]*)?",
+        lambda match: match.group(0).replace("\\", "/"),
+        redacted,
+    )
+    redacted = WINDOWS_ABSOLUTE_PATH.sub("<ABSOLUTE_PATH>", redacted)
+    redacted = UNIX_ABSOLUTE_PATH.sub("<ABSOLUTE_PATH>", redacted)
+    return redacted
 
-    def sanitize(value: str) -> str:
-        prefix, separator, candidate = value.partition("=")
-        path_value = candidate if separator else value
-        posix = PurePosixPath(path_value)
-        windows = PureWindowsPath(path_value)
-        if not (posix.is_absolute() or windows.is_absolute() or windows.drive):
-            return value
-        name = windows.name if windows.is_absolute() or windows.drive else posix.name
-        replacement = f"<absolute-path>/{name}" if name else "<absolute-path>"
-        return f"{prefix}={replacement}" if separator else replacement
 
-    return [sanitize(argument) for argument in command]
+def redact_value(value: Any, sensitive_roots: Iterable[Path | str] = ()) -> Any:
+    """Recursively apply report redaction to JSON-compatible values."""
+    roots = tuple(sensitive_roots)
+    if isinstance(value, str):
+        return redact_sensitive_text(value, roots)
+    if isinstance(value, list):
+        return [redact_value(item, roots) for item in value]
+    if isinstance(value, dict):
+        return {key: redact_value(item, roots) for key, item in value.items()}
+    return value
+
+
+def sanitize_command(command: list[str], sensitive_roots: Iterable[Path | str] = ()) -> list[str]:
+    """Redact filesystem paths in command arguments while preserving relative arguments."""
+    return [redact_sensitive_text(argument, sensitive_roots) for argument in command]
 
 
 def redact_known_paths(text: str, paths: list[Path]) -> str:
-    """Replace known local roots in captured process output."""
-    redacted = text
-    replacements: set[str] = set()
-    for path in paths:
-        resolved = str(path.resolve())
-        replacements.update({resolved, resolved.replace("\\", "/")})
-    for value in sorted(replacements, key=len, reverse=True):
-        redacted = redacted.replace(value, "<local-path>")
-    return redacted
+    """Backward-compatible wrapper around unified report redaction."""
+    return redact_sensitive_text(text, paths)

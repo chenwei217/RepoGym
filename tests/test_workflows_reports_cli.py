@@ -40,6 +40,23 @@ class NonzeroExecutor:
         )
 
 
+class PathLeakingExecutor:
+    def __init__(self) -> None:
+        self.paths: list[str] = []
+
+    def execute(self, command: list[str], cwd: Path, timeout_seconds: int) -> ExecutionResult:
+        local_path = str(cwd / "private" / "test_file.py")
+        self.paths.append(str(cwd))
+        return ExecutionResult(
+            command=[str(cwd / "python")],
+            return_code=0,
+            stdout=f"8 passed at {local_path}",
+            stderr=f"diagnostic from {local_path}",
+            duration_seconds=0.01,
+            termination_diagnostics=[f"cleanup checked {local_path}"],
+        )
+
+
 @pytest.mark.parametrize("task_name", ["python-cache-ttl", "python-config-merge"])
 def test_example_tasks_verify(task_name: str) -> None:
     report = verify_task(ROOT / "tasks" / task_name)
@@ -172,16 +189,47 @@ def test_reports_render_all_formats_and_escape_html(tmp_path: Path) -> None:
         ROOT / "examples" / "submissions" / "cache-ttl-fixed",
         tmp_path / "runs",
     )
-    (run_dir / "stdout.txt").write_text("<script>alert(1)</script>", encoding="utf-8")
+    (run_dir / "stdout.txt").write_text(
+        "<script>alert(1)</script> C:\\Users\\alice\\secret.py /home/alice/secret.py",
+        encoding="utf-8",
+    )
     html_path = tmp_path / "report.html"
     html = generate_report(run_dir, "html", html_path)
     json_text = generate_report(run_dir, "json")
     terminal = Console(record=True, width=100)
     assert generate_report(run_dir, "terminal", console=terminal) is None
     assert html is not None and "&lt;script&gt;" in html and "<script>" not in html
+    assert "C:\\Users" not in html and "/home/alice" not in html
     assert html_path.read_text(encoding="utf-8") == html
     assert json_text is not None and json.loads(json_text)["score"] == 100
     assert "correctness" in terminal.export_text()
+
+
+def test_grade_redacts_all_artifacts_and_does_not_capture_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    secret = "repogym-test-token-must-not-be-recorded"
+    monkeypatch.setenv("REPOGYM_TEST_TOKEN", secret)
+    executor = PathLeakingExecutor()
+    run_dir = grade_submission(
+        ROOT / "tasks" / "python-cache-ttl",
+        ROOT / "examples" / "submissions" / "cache-ttl-fixed",
+        tmp_path / "runs",
+        executor,
+    )
+    artifact_text = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted(run_dir.iterdir()) if path.is_file()
+    )
+    assert secret not in artifact_text
+    assert "<WORKSPACE>/private/test_file.py" in artifact_text
+    assert all(path not in artifact_text for path in executor.paths)
+
+    terminal = Console(record=True, width=120)
+    generate_report(run_dir, "terminal", console=terminal)
+    assert all(path not in terminal.export_text() for path in executor.paths)
+    html = generate_report(run_dir, "html", tmp_path / "redacted.html")
+    assert html is not None
+    assert all(path not in html for path in executor.paths)
 
 
 def test_report_rejects_incomplete_run(tmp_path: Path) -> None:
