@@ -82,7 +82,7 @@ def grade_submission(
         if all_result.return_code is None and not all_result.timed_out:
             status = "error"
         score = round(sum(item.score for item in dimensions.values()), 2)
-        sensitive_roots = [workspace, task_directory.resolve(), submission.resolve()]
+        sensitive_roots = [workspace.resolve(), task_directory.resolve(), submission.resolve()]
         evidence = ExecutionEvidence(
             argv=sanitize_command(all_result.command, sensitive_roots),
             exit_code=all_result.return_code,
