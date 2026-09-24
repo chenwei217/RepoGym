@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -94,10 +94,29 @@ class DimensionResult(BaseModel):
 
 
 class ExecutionEvidence(BaseModel):
-    command: list[str]
+    argv: list[str] = Field(default_factory=list)
     exit_code: int | None
     timed_out: bool
-    test_statistics_source: Literal["pytest_summary"]
+    duration_seconds: float = Field(default=0.0, ge=0)
+    working_directory: Literal["<WORKSPACE>"] = "<WORKSPACE>"
+    stdout_file: Literal["stdout.txt"] = "stdout.txt"
+    stderr_file: Literal["stderr.txt"] = "stderr.txt"
+    test_statistics_source: Literal["pytest_summary", "unavailable"]
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_command(cls, value: Any) -> Any:
+        """Read schema-v1 results that stored argv under ``command``."""
+        if isinstance(value, dict) and "argv" not in value and "command" in value:
+            migrated = dict(value)
+            migrated["argv"] = migrated["command"]
+            return migrated
+        return value
+
+    @property
+    def command(self) -> list[str]:
+        """Compatibility accessor for callers that used the schema-v1 name."""
+        return self.argv
 
 
 class GradeResult(BaseModel):

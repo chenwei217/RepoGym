@@ -29,6 +29,17 @@ class TimeoutExecutor:
         )
 
 
+class NonzeroExecutor:
+    def execute(self, command: list[str], cwd: Path, timeout_seconds: int) -> ExecutionResult:
+        return ExecutionResult(
+            command=command,
+            return_code=3,
+            stdout="1 failed in 0.01s",
+            stderr="candidate failed",
+            duration_seconds=0.01,
+        )
+
+
 @pytest.mark.parametrize("task_name", ["python-cache-ttl", "python-config-merge"])
 def test_example_tasks_verify(task_name: str) -> None:
     report = verify_task(ROOT / "tasks" / task_name)
@@ -59,14 +70,19 @@ def test_grades_correct_submission_and_writes_artifacts(tmp_path: Path) -> None:
     assert result.score == 100
     assert result.tests.passed == 8
     assert result.execution is not None
-    assert result.execution.command == ["python", "-m", "pytest", "-q"]
+    assert result.execution.argv == ["python", "-m", "pytest", "-q"]
     assert result.execution.exit_code == 0
     assert result.execution.timed_out is False
+    assert result.execution.duration_seconds >= 0
+    assert result.execution.working_directory == "<WORKSPACE>"
+    assert result.execution.stdout_file == "stdout.txt"
+    assert result.execution.stderr_file == "stderr.txt"
     assert result.execution.test_statistics_source == "pytest_summary"
     assert "8 passed" in stdout
     assert stderr == ""
     metadata = json.loads((run_dir / "metadata.json").read_text(encoding="utf-8"))
     assert len(metadata["task_fingerprint"]) == 64
+    assert metadata["execution"] == result.execution.model_dump(mode="json")
     serialized_metadata = json.dumps(metadata)
     assert str(ROOT) not in serialized_metadata
     assert str(tmp_path) not in serialized_metadata
@@ -106,8 +122,43 @@ def test_timeout_still_writes_result(tmp_path: Path) -> None:
     )
     result, _, _ = load_run(run_dir)
     assert result.status == "timed_out"
+    assert result.execution is not None
+    assert result.execution.timed_out is True
+    assert result.execution.exit_code is None
     assert result.tests.model_dump() == {"passed": 0, "failed": 8, "total": 8}
     assert (run_dir / "result.json").is_file()
+
+
+def test_nonzero_exit_is_persisted_in_execution_evidence(tmp_path: Path) -> None:
+    run_dir = grade_submission(
+        ROOT / "tasks" / "python-cache-ttl",
+        ROOT / "examples" / "submissions" / "cache-ttl-fixed",
+        tmp_path / "runs",
+        NonzeroExecutor(),
+    )
+    result, _, _ = load_run(run_dir)
+    assert result.execution is not None
+    assert result.execution.exit_code == 3
+    assert result.execution.timed_out is False
+
+
+def test_missing_test_command_writes_error_evidence(valid_task: Path, tmp_path: Path) -> None:
+    config = valid_task / "task.yaml"
+    config.write_text(
+        config.read_text(encoding="utf-8").replace(
+            "python -m pytest -q", "definitely-not-a-real-program"
+        ),
+        encoding="utf-8",
+    )
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    run_dir = grade_submission(valid_task, submission, tmp_path / "runs")
+    result, _, stderr = load_run(run_dir)
+    assert result.status == "error"
+    assert result.execution is not None
+    assert result.execution.argv == ["definitely-not-a-real-program"]
+    assert result.execution.exit_code is None
+    assert stderr
 
 
 def test_grade_rejects_missing_submission(tmp_path: Path) -> None:

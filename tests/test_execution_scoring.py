@@ -53,6 +53,22 @@ def test_local_executor_handles_missing_program(tmp_path: Path) -> None:
     assert result.stderr
 
 
+def test_local_executor_preserves_non_utf8_output_safely(tmp_path: Path) -> None:
+    result = LocalExecutor().execute(
+        [sys.executable, "-c", "import sys; sys.stdout.buffer.write(bytes([255]))"],
+        tmp_path,
+        5,
+    )
+    assert result.return_code == 0
+    assert result.stdout == "�"
+
+
+def test_local_executor_records_nonzero_exit(tmp_path: Path) -> None:
+    result = LocalExecutor().execute([sys.executable, "-c", "raise SystemExit(7)"], tmp_path, 5)
+    assert result.return_code == 7
+    assert not result.timed_out
+
+
 def test_parses_pytest_counts() -> None:
     result = ExecutionResult(
         command=["pytest"],

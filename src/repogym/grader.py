@@ -77,6 +77,16 @@ def grade_submission(
         if all_result.return_code is None and not all_result.timed_out:
             status = "error"
         score = round(sum(item.score for item in dimensions.values()), 2)
+        evidence = ExecutionEvidence(
+            argv=sanitize_command(all_result.command),
+            exit_code=all_result.return_code,
+            timed_out=all_result.timed_out,
+            duration_seconds=round(all_result.duration_seconds, 3),
+            working_directory="<WORKSPACE>",
+            stdout_file="stdout.txt",
+            stderr_file="stderr.txt",
+            test_statistics_source="pytest_summary",
+        )
         result = GradeResult(
             task_id=task.id,
             task_fingerprint=fingerprint,
@@ -87,12 +97,7 @@ def grade_submission(
             tests=all_counts,
             violations=violations,
             duration_seconds=round(all_result.duration_seconds, 3),
-            execution=ExecutionEvidence(
-                command=sanitize_command(all_result.command),
-                exit_code=all_result.return_code,
-                timed_out=all_result.timed_out,
-                test_statistics_source="pytest_summary",
-            ),
+            execution=evidence,
         )
         sensitive_roots = [workspace, task_directory.resolve(), submission.resolve()]
         safe_stdout = redact_known_paths(all_result.stdout, sensitive_roots)
@@ -109,6 +114,7 @@ def grade_submission(
                 "command": sanitize_command(all_result.command),
                 "return_code": all_result.return_code,
                 "timed_out": all_result.timed_out,
+                "execution": evidence.model_dump(mode="json"),
             },
         )
         _write_json(run_dir / "result.json", result.model_dump(mode="json"))

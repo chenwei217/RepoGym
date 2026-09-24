@@ -6,7 +6,7 @@ import pytest
 
 from repogym.exceptions import TaskLoadError
 from repogym.loader import load_task
-from repogym.models import ExecutionSpec, ScoringSpec
+from repogym.models import ExecutionEvidence, ExecutionSpec, ScoringSpec
 from repogym.validator import validate_task
 
 
@@ -61,6 +61,22 @@ def test_model_rejects_bad_weight_total() -> None:
 def test_model_rejects_blank_command() -> None:
     with pytest.raises(ValueError, match="blank"):
         ExecutionSpec(timeout_seconds=10, test_command="   ")
+
+
+def test_execution_evidence_round_trips_and_reads_legacy_command() -> None:
+    legacy = {
+        "command": ["python", "-m", "pytest"],
+        "exit_code": 0,
+        "timed_out": False,
+        "test_statistics_source": "pytest_summary",
+    }
+    evidence = ExecutionEvidence.model_validate(legacy)
+    assert evidence.argv == ["python", "-m", "pytest"]
+    assert evidence.command == evidence.argv
+    serialized = evidence.model_dump(mode="json")
+    assert "command" not in serialized
+    assert serialized["working_directory"] == "<WORKSPACE>"
+    assert ExecutionEvidence.model_validate(serialized) == evidence
 
 
 def test_validates_complete_task(valid_task: Path) -> None:
