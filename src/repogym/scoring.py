@@ -3,18 +3,11 @@
 from __future__ import annotations
 
 import ast
-import fnmatch
 from pathlib import Path
 
 from repogym.executors.base import Executor
 from repogym.models import DimensionResult, ExecutionResult, TaskSpec, TestCounts
-
-
-def path_matches(path: str, pattern: str) -> bool:
-    normalized = pattern.replace("\\", "/")
-    if normalized.endswith("/**"):
-        return path.startswith(normalized[:-3].rstrip("/") + "/")
-    return fnmatch.fnmatchcase(path, normalized)
+from repogym.security import path_matches
 
 
 def _weighted_ratio(weight: int, passed: int, total: int) -> float:

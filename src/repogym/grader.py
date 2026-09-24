@@ -16,6 +16,7 @@ from repogym.models import ExecutionEvidence, GradeResult
 from repogym.reproducibility import task_fingerprint
 from repogym.scoring import score_correctness, score_quality, score_regression, score_scope
 from repogym.security import (
+    audit_submission,
     changed_paths,
     copy_tree_safe,
     file_manifest,
@@ -42,6 +43,9 @@ def grade_submission(
     if not submission.is_dir():
         raise SecurityError(f"Submission directory does not exist: {submission}")
     task = validation.task
+    audit = audit_submission(submission, task)
+    if not audit.accepted:
+        raise SecurityError("Submission audit failed:\n  - " + "\n  - ".join(audit.violations))
     fingerprint = task_fingerprint(task_directory, task)
     runner = executor or LocalExecutor()
     run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]

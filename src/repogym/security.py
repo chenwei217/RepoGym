@@ -2,12 +2,38 @@
 
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import os
 import shutil
+import stat
+import unicodedata
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from repogym.exceptions import SecurityError
+from repogym.models import TaskSpec
+
+MAX_SUBMISSION_FILE_BYTES = 5 * 1024 * 1024
+
+
+@dataclass(frozen=True)
+class SubmissionAuditResult:
+    accepted_files: list[str]
+    rejected_files: list[str]
+    violations: list[str]
+
+    @property
+    def accepted(self) -> bool:
+        return not self.violations
+
+
+def path_matches(path: str, pattern: str) -> bool:
+    """Match normalized task paths with explicit recursive-directory semantics."""
+    normalized = pattern.replace("\\", "/")
+    if normalized.endswith("/**"):
+        return path.startswith(normalized[:-3].rstrip("/") + "/")
+    return fnmatch.fnmatchcase(path, normalized)
 
 
 def validate_relative_path(value: str, field: str) -> None:
@@ -29,6 +55,138 @@ def safe_join(root: Path, relative: str) -> Path:
     except ValueError as exc:
         raise SecurityError(f"Path escapes workspace: {relative!r}") from exc
     return candidate
+
+
+def _is_reparse_point(stat_result: os.stat_result) -> bool:
+    attributes = getattr(stat_result, "st_file_attributes", 0)
+    flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return bool(attributes & flag)
+
+
+def _is_sensitive_submission_path(relative: str) -> bool:
+    parts = PurePosixPath(relative).parts
+    lowered = [part.casefold() for part in parts]
+    if any(part in {".git", ".ssh"} for part in lowered):
+        return True
+    name = lowered[-1]
+    return (
+        name == ".env"
+        or name.startswith(".env.")
+        or name in {"id_rsa", "id_ed25519", "credentials", "credentials.json", "secrets.json"}
+        or name.endswith((".pem", ".key", ".p12", ".pfx"))
+    )
+
+
+def submission_path_violations(
+    relative: str,
+    task: TaskSpec,
+    size: int,
+    max_file_bytes: int = MAX_SUBMISSION_FILE_BYTES,
+) -> list[str]:
+    """Validate one normalized submission file path without reading its contents."""
+    violations: list[str] = []
+    try:
+        validate_relative_path(relative, "submission path")
+    except SecurityError as exc:
+        return [str(exc)]
+    if any(path_matches(relative, pattern) for pattern in task.constraints.forbidden_paths):
+        violations.append(f"Forbidden submission path: {relative}")
+    if not any(path_matches(relative, pattern) for pattern in task.constraints.allowed_paths):
+        violations.append(f"Submission path outside allowed scope: {relative}")
+    if size > max_file_bytes:
+        violations.append(
+            f"Submission file exceeds {max_file_bytes} bytes: {relative} ({size} bytes)"
+        )
+    if _is_sensitive_submission_path(relative):
+        violations.append(f"Sensitive filename is not allowed: {relative}")
+    return violations
+
+
+def find_case_conflicts(paths: list[str]) -> list[tuple[str, str]]:
+    """Find paths that collide on case-insensitive, Unicode-normalizing filesystems."""
+    seen: dict[str, str] = {}
+    conflicts: list[tuple[str, str]] = []
+    for path in sorted(paths):
+        key = unicodedata.normalize("NFC", path).casefold()
+        previous = seen.get(key)
+        if previous is not None and previous != path:
+            conflicts.append((previous, path))
+        else:
+            seen[key] = path
+    return conflicts
+
+
+def audit_submission(
+    submission: Path,
+    task: TaskSpec,
+    max_file_bytes: int = MAX_SUBMISSION_FILE_BYTES,
+) -> SubmissionAuditResult:
+    """Audit a candidate tree without following links or reading file contents."""
+    accepted_files: list[str] = []
+    rejected_files: set[str] = set()
+    violations: list[str] = []
+    if submission.is_symlink():
+        return SubmissionAuditResult([], ["."], ["Submission root may not be a symbolic link."])
+    try:
+        root_stat = os.lstat(submission)
+    except OSError as exc:
+        return SubmissionAuditResult([], ["."], [f"Cannot inspect submission root: {exc}"])
+    if _is_reparse_point(root_stat):
+        return SubmissionAuditResult([], ["."], ["Submission root may not be a reparse point."])
+    if not stat.S_ISDIR(root_stat.st_mode):
+        return SubmissionAuditResult([], ["."], ["Submission root is not a directory."])
+
+    def visit(directory: Path) -> None:
+        try:
+            with os.scandir(directory) as iterator:
+                entries = sorted(iterator, key=lambda entry: entry.name)
+        except OSError as exc:
+            relative_dir = directory.relative_to(submission).as_posix() or "."
+            rejected_files.add(relative_dir)
+            violations.append(f"Cannot inspect submission directory {relative_dir}: {exc}")
+            return
+        for entry in entries:
+            item = Path(entry.path)
+            relative = item.relative_to(submission).as_posix()
+            try:
+                item_stat = entry.stat(follow_symlinks=False)
+            except OSError as exc:
+                rejected_files.add(relative)
+                violations.append(f"Cannot inspect submission entry {relative}: {exc}")
+                continue
+            if entry.is_symlink():
+                rejected_files.add(relative)
+                violations.append(f"Symbolic links are not allowed: {relative}")
+                continue
+            if _is_reparse_point(item_stat):
+                rejected_files.add(relative)
+                violations.append(f"Reparse points are not allowed: {relative}")
+                continue
+            if stat.S_ISDIR(item_stat.st_mode):
+                visit(item)
+                continue
+            if not stat.S_ISREG(item_stat.st_mode):
+                rejected_files.add(relative)
+                violations.append(f"Special files are not allowed: {relative}")
+                continue
+            file_violations = submission_path_violations(
+                relative, task, item_stat.st_size, max_file_bytes
+            )
+            if file_violations:
+                rejected_files.add(relative)
+                violations.extend(file_violations)
+            else:
+                accepted_files.append(relative)
+
+    visit(submission)
+    all_files = [*accepted_files, *rejected_files]
+    for first, second in find_case_conflicts(all_files):
+        rejected_files.update({first, second})
+        accepted_files = [path for path in accepted_files if path not in {first, second}]
+        violations.append(f"Case-conflicting submission paths: {first} and {second}")
+    return SubmissionAuditResult(
+        sorted(accepted_files), sorted(rejected_files), sorted(set(violations))
+    )
 
 
 def copy_tree_safe(source: Path, destination: Path) -> None:
