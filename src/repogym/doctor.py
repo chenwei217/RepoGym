@@ -5,12 +5,14 @@ from __future__ import annotations
 import importlib.util
 import shutil
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 from repogym.commands import split_command
 from repogym.exceptions import RepoGymError, SecurityError
+from repogym.reproducibility import task_fingerprint
 from repogym.security import safe_join
 from repogym.validator import validate_task
 
@@ -52,6 +54,18 @@ def diagnose_task(task_directory: Path) -> DoctorReport:
         checks.append(DiagnosticCheck("task definition", "fail", "; ".join(validation.errors)))
     else:
         checks.append(DiagnosticCheck("task definition", "pass", f"Loaded {task.id}."))
+
+    starter = task_directory.resolve() / "starter"
+    starter_status: DiagnosticStatus = "pass" if starter.is_dir() else "fail"
+    checks.append(
+        DiagnosticCheck(
+            "starter project",
+            starter_status,
+            "Starter project directory exists."
+            if starter_status == "pass"
+            else "Starter project directory is missing.",
+        )
+    )
 
     current = sys.version_info
     version = f"{current.major}.{current.minor}.{current.micro}"
@@ -110,13 +124,41 @@ def diagnose_task(task_directory: Path) -> DoctorReport:
         )
         checks.append(DiagnosticCheck("working directory", status, message))
 
-    discovered = validation.public_tests + validation.private_tests
-    discovery_status: DiagnosticStatus = "pass" if discovered else "fail"
-    checks.append(
-        DiagnosticCheck(
-            "test discovery",
-            discovery_status,
-            f"{validation.public_tests} public and {validation.private_tests} private tests found.",
+    for visibility, count in (
+        ("public", validation.public_tests),
+        ("private", validation.private_tests),
+    ):
+        discovery_status: DiagnosticStatus = "pass" if count else "fail"
+        checks.append(
+            DiagnosticCheck(
+                f"{visibility} test discovery",
+                discovery_status,
+                f"{count} {visibility} tests found.",
+            )
         )
-    )
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="repogym-doctor-") as temporary:
+            probe = Path(temporary) / "write-probe"
+            probe.write_text("ok\n", encoding="utf-8")
+            probe.unlink()
+    except OSError as exc:
+        checks.append(DiagnosticCheck("temporary directory", "fail", str(exc)))
+    else:
+        checks.append(
+            DiagnosticCheck("temporary directory", "pass", "Temporary workspace is writable.")
+        )
+
+    try:
+        fingerprint = task_fingerprint(task_directory, task)
+    except RepoGymError as exc:
+        checks.append(DiagnosticCheck("task fingerprint", "fail", str(exc)))
+    else:
+        checks.append(
+            DiagnosticCheck(
+                "task fingerprint",
+                "pass",
+                f"Deterministic SHA-256: {fingerprint}",
+            )
+        )
     return DoctorReport(checks)
