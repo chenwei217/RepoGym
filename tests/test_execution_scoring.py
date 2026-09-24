@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import subprocess
 import sys
+import time
 from pathlib import Path
+
+import psutil
+import pytest
 
 from repogym.executors.local import LocalExecutor
 from repogym.loader import load_task
@@ -45,6 +50,56 @@ def test_local_executor_times_out(tmp_path: Path) -> None:
     )
     assert result.timed_out
     assert result.return_code is None
+
+
+def test_local_executor_terminates_timed_out_process_tree(tmp_path: Path) -> None:
+    child_pid_file = tmp_path / "child.pid"
+    parent_code = (
+        "import subprocess, sys, time\n"
+        "child = subprocess.Popen([sys.executable, '-c', "
+        "'import time; time.sleep(60)'])\n"
+        f"open({str(child_pid_file)!r}, 'w', encoding='utf-8').write(str(child.pid))\n"
+        "time.sleep(60)\n"
+    )
+    result = LocalExecutor().execute([sys.executable, "-c", parent_code], tmp_path, 1)
+    assert result.timed_out
+    assert child_pid_file.is_file()
+    child_pid = int(child_pid_file.read_text(encoding="utf-8"))
+    deadline = time.monotonic() + 3
+    while psutil.pid_exists(child_pid) and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert not psutil.pid_exists(child_pid)
+
+
+def test_local_executor_does_not_terminate_unrelated_process(tmp_path: Path) -> None:
+    unrelated = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    try:
+        result = LocalExecutor().execute(
+            [sys.executable, "-c", "import time; time.sleep(60)"], tmp_path, 1
+        )
+        assert result.timed_out
+        assert unrelated.poll() is None
+    finally:
+        unrelated.terminate()
+        unrelated.wait(timeout=5)
+
+
+def test_local_executor_retains_termination_diagnostics(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def terminate_with_diagnostic(root: psutil.Process) -> list[str]:
+        root.kill()
+        return ["simulated child termination failure"]
+
+    monkeypatch.setattr(
+        "repogym.executors.local._terminate_process_tree", terminate_with_diagnostic
+    )
+    result = LocalExecutor().execute(
+        [sys.executable, "-c", "import time; time.sleep(60)"], tmp_path, 1
+    )
+    assert result.timed_out
+    assert result.termination_diagnostics == ["simulated child termination failure"]
+    assert "simulated child termination failure" in result.stderr
 
 
 def test_local_executor_handles_missing_program(tmp_path: Path) -> None:

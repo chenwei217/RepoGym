@@ -79,6 +79,7 @@ class ExecutionResult(BaseModel):
     stderr: str
     duration_seconds: float
     timed_out: bool = False
+    termination_diagnostics: list[str] = Field(default_factory=list)
 
 
 class TestCounts(BaseModel):
@@ -102,6 +103,7 @@ class ExecutionEvidence(BaseModel):
     stdout_file: Literal["stdout.txt"] = "stdout.txt"
     stderr_file: Literal["stderr.txt"] = "stderr.txt"
     test_statistics_source: Literal["pytest_summary", "unavailable"]
+    termination_diagnostics: list[str] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
