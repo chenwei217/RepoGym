@@ -25,7 +25,13 @@ Missing or timed-out Ruff execution earns no Ruff half.
 
 ## Scope control
 
-If any changed path matches `forbidden_paths`, the score is zero. Otherwise:
+The CLI grader runs submission preflight before workspace creation. A submission containing a
+forbidden path or a file outside `allowed_paths` is rejected and never executed. This is a hard
+security boundary, not merely a score deduction.
+
+The scope formula remains part of the scoring API for already-materialized change manifests and
+for backward-compatible result interpretation. If it is evaluated directly and any changed path
+matches `forbidden_paths`, the score is zero. Otherwise:
 
 `scope_control = weight × (1 - outside_allowed_count / changed_count)`.
 
@@ -33,5 +39,7 @@ No changes receive full scope credit. Glob patterns ending in `/**` match every 
 other patterns use case-sensitive shell-style matching. Each forbidden or outside path is also
 recorded as a violation.
 
-Timeouts and abnormal test starts still produce a run result. Any test counts observed before a
-timeout are parsed; absent counts result in zero correctness and regression credit.
+Timeouts and abnormal test starts still produce a run result with structured evidence. Any test
+counts observed before a timeout are parsed; absent counts result in zero correctness and
+regression credit. Run comparison reports the persisted score and dimensions without executing
+the task again.
