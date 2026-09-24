@@ -11,13 +11,14 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 
 - Strict Pydantic validation for task metadata and path constraints
 - Public and private pytest suites with reference-solution verification
-- SHA-256 task fingerprints over specifications, prompts, starter code, and tests
+- SHA-256 task fingerprints over every versioned task input, including the reference patch
 - Environment diagnostics for commands, dependencies, working directories, and test discovery
 - Temporary workspaces and a replaceable executor interface
 - Deterministic correctness, regression, static-quality, and scope scores
 - Deterministic run-to-run comparison in terminal or JSON form
 - Terminal, JSON, and self-contained HTML reports
-- Defensive handling of path traversal, symbolic links, timeouts, and undecodable output
+- Preflight submission auditing for scope, links, reparse points, size, and sensitive filenames
+- Process-tree timeout cleanup plus unified local-path redaction in every report format
 - Two original, runnable Python tasks
 
 ## Quick start
@@ -61,18 +62,18 @@ pytest --cov=repogym --cov-report=term-missing
 | `repogym doctor TASK` | Diagnose the local execution environment |
 | `repogym verify TASK` | Prove the starter fails and the reference fix passes |
 | `repogym grade TASK --submission DIR` | Grade a candidate in a temporary workspace |
-| `repogym report RUN --format terminal\|json\|html` | Re-render saved run artifacts |
-| `repogym compare RUN_A RUN_B --format terminal\|json` | Compare two persisted runs |
+| `repogym report RUN --format terminal\|json\|html [--output FILE]` | Re-render saved run artifacts |
+| `repogym compare RUN_A RUN_B --format terminal\|json [--output FILE]` | Compare two persisted runs |
 | `repogym version` | Print the installed version |
 
 Pass `--debug` before a command to show tracebacks for expected domain errors.
 
 ## Reproducibility and diagnostics
 
-Every grade stores a SHA-256 task fingerprint in `metadata.json`. The digest covers the relative
-paths and exact bytes of `task.yaml`, the configured prompt, `starter/`, and both test suites.
-Reference patches are intentionally excluded because they are not part of candidate execution.
-Changing any graded input changes the fingerprint.
+Every grade stores a SHA-256 task fingerprint in both `metadata.json` and `result.json`. The
+digest covers normalized relative paths and exact bytes for `task.yaml`, `prompt.md`, the
+configured description, `starter/`, public and private tests, and `reference/solution.patch`.
+Changing any of those inputs changes the fingerprint; mtimes and file creation order do not.
 
 Run `doctor` before a long evaluation to inspect the current environment. This output was
 captured from the bundled cache task; the Python patch version will reflect the local runtime:
@@ -80,30 +81,39 @@ captured from the bundled cache task; the Python patch version will reflect the 
 ```text
 $ repogym doctor tasks/python-cache-ttl
 PASS task definition: Loaded python-cache-ttl.
+PASS starter project: Starter project directory exists.
 PASS python version: Python 3.14.4; requires 3.11+.
 PASS test command: Executable found: python
 PASS dependencies: Python module available: pytest
 PASS working directory: Starter working directory exists: .
-PASS test discovery: 4 public and 4 private tests found.
+PASS public test discovery: 4 public tests found.
+PASS private test discovery: 4 private tests found.
+PASS temporary directory: Temporary workspace is writable.
+PASS task fingerprint: Deterministic SHA-256:
+d92dfb7b7bc039787c17692ef75e74d20c8ddf0906c05efa78f2a95bac64ddb0
 ```
 
 ## Comparing runs
 
-`compare` reports B minus A for the total score, every scoring dimension, passed tests, and
-duration. It also lists added and removed violations. For the bundled broken and fixed cache
-submissions, the real terminal result includes:
+`compare` reports B minus A for the total score, every scoring dimension, passed/failed/total
+tests, duration, status, timeout state, and violations. For the bundled broken and fixed cache
+submissions, an actual local run produced:
 
 ```text
-Metric             Run A   Run B    Delta
-total score        20.00   100.00   +80.00
-correctness         0.00    60.00   +60.00
-regression_safety   0.00    20.00   +20.00
-tests passed        0        8       +8
+Metric             Run A  Run B   Delta
+total score        20.00  100.00  +80.00
+correctness         0.00   60.00  +60.00
+regression_safety   0.00   20.00  +20.00
+tests passed        0       8      +8
+tests failed        8       0      -8
+tests total         8       8      +0
+Status: completed -> completed; timed out: False -> False
 Violations added: 0; removed: 0
 ```
 
-Use `--format json` for automation. Comparisons read immutable `result.json` files and do not
-re-run candidate code.
+Use `--format json` and optionally `--output FILE` for automation. Comparisons read immutable
+run artifacts and never re-run candidate code. A task-ID mismatch is an error; a fingerprint
+mismatch is a prominent comparability warning.
 
 ## Task specification
 
@@ -159,7 +169,7 @@ changed. See [Scoring](docs/scoring.md) for edge cases and exact formulas.
 
 The HTML renderer emits one portable file with no CDN dependency. It contains the overall
 score, every scoring dimension, test statistics, violations, duration, and collapsed process
-output. A project screenshot can be added here once the visual design is stabilized.
+output. Untrusted output is HTML-escaped and local absolute paths are redacted first.
 
 ## Architecture
 
@@ -174,21 +184,27 @@ flowchart TD
     G --> H[Run Comparison]
 ```
 
-The `Executor` protocol separates orchestration from process execution. The MVP ships a
-`LocalExecutor`; a future container executor can implement the same interface. More detail is
-in [Architecture](docs/architecture.md).
+The `Executor` protocol separates orchestration from process execution. The current release
+ships a `LocalExecutor`; a future container executor can implement the same interface. More
+detail is in [Architecture](docs/architecture.md).
 
 ## Security model
 
 **LocalExecutor is not a sandbox.** Task tests and candidate code execute as the current OS
-user and must be trusted. RepoGym rejects links and path escapes and enforces a timeout, but
-those controls do not contain malicious processes. Use a disposable VM or appropriately
-configured container for untrusted material. Read [Security model](docs/security-model.md)
-before operating a shared grading service.
+user and must be trusted. RepoGym audits submissions before copying, rejects links and path
+escapes, and terminates the recorded process tree on timeout, but those controls do not contain
+malicious code. Use a disposable VM or appropriately configured container for untrusted
+material. Read [Security model](docs/security-model.md) before operating a shared service.
 
 Persisted execution evidence includes a sanitized argument vector, exit code, timeout state,
-and the test-statistics source. Known local roots are removed from captured output, and run
-metadata does not store task or submission absolute paths.
+duration, `<WORKSPACE>` working directory, output artifact names, test-statistics source, and
+termination diagnostics. The same redaction policy is applied to captured output, JSON,
+terminal, HTML, and comparisons; environment variables and tokens are never recorded
+automatically.
+
+Detailed workflows: [CLI reference](docs/cli.md),
+[reproducibility](docs/reproducibility.md), [run comparison](docs/run-comparison.md), and
+[project milestones](docs/milestones.md).
 
 ## Roadmap
 

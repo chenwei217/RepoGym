@@ -28,11 +28,12 @@ fails for the intended reason before the fix, not because it cannot import or in
 1. Create `task.yaml`, `prompt.md`, `starter/`, both test directories, and
    `reference/solution.patch`.
 2. Run `repogym validate tasks/<id>` to catch schema, path, and layout errors.
-3. Run `repogym verify tasks/<id>` to execute the starter, apply the patch, and execute again.
-4. Grade both a known-correct and a deliberately incomplete submission.
-5. Review the report and confirm every deduction is explainable from the published rules.
+3. Run `repogym doctor tasks/<id>` to check the command, dependencies, discovery, temporary
+   storage, and deterministic fingerprint without executing candidate code.
+4. Run `repogym verify tasks/<id>` to execute the starter, apply the patch, and execute again.
+5. Grade both a known-correct and a deliberately incomplete submission.
+6. Compare those runs and confirm every deduction is explainable from the published rules.
 
 Use regression tests for behavior that should remain stable and edge tests for equality
 boundaries, empty inputs, replacement, deletion, and nested mutable data. Do not assert a
 specific algorithm when several implementations satisfy the contract.
-

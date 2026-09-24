@@ -17,12 +17,15 @@ secrets, restricted networking, and a dedicated unprivileged identity.
 ## Defensive controls
 
 - task paths must be relative and cannot contain `..` or absolute/drive-qualified paths;
-- starter, test, and submission copies reject symbolic links and special files;
+- submission preflight rejects links, detectable reparse points, special files, oversized files,
+  sensitive filenames, case-conflicting paths, and files outside the declared allowed scope;
+- starter, test, and accepted submission copies re-check links and special files while copying;
 - reference patches cannot escape the workspace or alter declared forbidden paths;
 - commands are tokenized and passed directly to `subprocess`, never to a shell;
 - timed-out local commands have their recorded process trees terminated without name-based kills;
 - temporary workspaces are managed by the standard library and cleaned on exit;
 - Jinja autoescaping protects the HTML report from task output injection.
+- absolute paths are redacted consistently from persisted artifacts and all report formats;
 
 These controls prevent common accidental escapes and report injection. They are not a substitute
 for OS-level isolation. A Docker executor is planned but not implemented.
