@@ -11,6 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from repogym import __version__
+from repogym.doctor import diagnose_task
 from repogym.exceptions import RepoGymError
 from repogym.grader import grade_submission
 from repogym.loader import load_task
@@ -69,6 +70,20 @@ def validate(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> N
             error_console.print(f"[red]FAIL[/red] {error}")
         raise typer.Exit(1)
     console.print("\n[bold green]Validation passed.[/bold green]")
+
+
+@app.command()
+def doctor(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> None:
+    """Diagnose whether a task can run in the current environment."""
+    report = diagnose_task(task)
+    styles = {"pass": "green", "warning": "yellow", "fail": "red"}
+    labels = {"pass": "PASS", "warning": "WARN", "fail": "FAIL"}
+    for check in report.checks:
+        console.print(
+            f"[{styles[check.status]}]{labels[check.status]}[/] {check.name}: {check.message}"
+        )
+    if not report.healthy:
+        raise typer.Exit(1)
 
 
 @app.command()
