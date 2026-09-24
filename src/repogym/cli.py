@@ -147,14 +147,17 @@ def compare(
     format_name: Annotated[
         Literal["terminal", "json"], typer.Option("--format", help="Comparison format.")
     ] = "terminal",
+    output: Annotated[Path | None, typer.Option("--output", help="Output file.")] = None,
 ) -> None:
     """Compare two persisted grading runs."""
     try:
-        rendered = generate_comparison(run_a, run_b, format_name, console)
+        rendered = generate_comparison(run_a, run_b, format_name, console, output)
     except RepoGymError as exc:
         _fail(exc)
-    if rendered is not None:
+    if rendered is not None and output is None:
         console.print(rendered, markup=False)
+    elif output is not None:
+        console.print(f"Comparison written to {output}")
 
 
 @app.command()
