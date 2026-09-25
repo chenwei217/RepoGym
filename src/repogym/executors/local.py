@@ -4,12 +4,85 @@ from __future__ import annotations
 
 import os
 import subprocess
+import threading
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import BinaryIO
 
 import psutil
 
 from repogym.models import ExecutionResult
+
+DEFAULT_OUTPUT_LIMIT_BYTES = 1024 * 1024
+_READ_CHUNK_BYTES = 64 * 1024
+
+
+@dataclass
+class _BoundedCapture:
+    limit: int
+    total: int = 0
+    head: bytearray = field(default_factory=bytearray)
+    tail: bytearray = field(default_factory=bytearray)
+
+    def add(self, chunk: bytes) -> None:
+        self.total += len(chunk)
+        head_limit = (self.limit + 1) // 2
+        tail_limit = self.limit - head_limit
+        if len(self.head) < head_limit:
+            take = min(head_limit - len(self.head), len(chunk))
+            self.head.extend(chunk[:take])
+            chunk = chunk[take:]
+        if tail_limit and chunk:
+            self.tail.extend(chunk)
+            if len(self.tail) > tail_limit:
+                del self.tail[: len(self.tail) - tail_limit]
+
+    @property
+    def truncated(self) -> bool:
+        return self.total > self.limit
+
+    def text(self) -> str:
+        head = bytes(self.head).decode("utf-8", errors="replace")
+        tail = bytes(self.tail).decode("utf-8", errors="replace")
+        if not self.truncated:
+            return head + tail
+        removed = self.total - self.limit
+        return f"{head}\n... <{removed} bytes truncated> ...\n{tail}"
+
+
+def _capture_pipe(stream: BinaryIO, capture: _BoundedCapture) -> None:
+    try:
+        while chunk := stream.read(_READ_CHUNK_BYTES):
+            capture.add(chunk)
+    except (OSError, ValueError):
+        return
+
+
+def _start_capture_threads(
+    process: subprocess.Popen[bytes], stdout: _BoundedCapture, stderr: _BoundedCapture
+) -> list[threading.Thread]:
+    assert process.stdout is not None
+    assert process.stderr is not None
+    threads = [
+        threading.Thread(target=_capture_pipe, args=(process.stdout, stdout), daemon=True),
+        threading.Thread(target=_capture_pipe, args=(process.stderr, stderr), daemon=True),
+    ]
+    for thread in threads:
+        thread.start()
+    return threads
+
+
+def _finish_capture(process: subprocess.Popen[bytes], threads: list[threading.Thread]) -> None:
+    for thread in threads:
+        thread.join(timeout=2)
+    if any(thread.is_alive() for thread in threads):
+        if process.stdout is not None:
+            process.stdout.close()
+        if process.stderr is not None:
+            process.stderr.close()
+        for thread in threads:
+            thread.join(timeout=0.5)
 
 
 def _terminate_process_tree(root: psutil.Process) -> list[str]:
@@ -49,9 +122,21 @@ def _terminate_process_tree(root: psutil.Process) -> list[str]:
 
 
 class LocalExecutor:
+    def __init__(
+        self,
+        max_stdout_bytes: int = DEFAULT_OUTPUT_LIMIT_BYTES,
+        max_stderr_bytes: int = DEFAULT_OUTPUT_LIMIT_BYTES,
+    ) -> None:
+        if max_stdout_bytes < 1 or max_stderr_bytes < 1:
+            raise ValueError("output limits must be positive")
+        self.max_stdout_bytes = max_stdout_bytes
+        self.max_stderr_bytes = max_stderr_bytes
+
     def execute(self, command: list[str], cwd: Path, timeout_seconds: int) -> ExecutionResult:
         started = time.monotonic()
         environment = os.environ.copy()
+        stdout_capture = _BoundedCapture(self.max_stdout_bytes)
+        stderr_capture = _BoundedCapture(self.max_stderr_bytes)
         for name in ("COV_CORE_SOURCE", "COV_CORE_CONFIG", "COV_CORE_DATAFILE"):
             environment.pop(name, None)
         try:
@@ -68,44 +153,55 @@ class LocalExecutor:
                 ),
             )
             root_process = psutil.Process(process.pid)
-            stdout_bytes, stderr_bytes = process.communicate(timeout=timeout_seconds)
+            threads = _start_capture_threads(process, stdout_capture, stderr_capture)
+            process.wait(timeout=timeout_seconds)
+            _finish_capture(process, threads)
             return ExecutionResult(
                 command=command,
                 return_code=process.returncode,
-                stdout=stdout_bytes.decode("utf-8", errors="replace"),
-                stderr=stderr_bytes.decode("utf-8", errors="replace"),
+                stdout=stdout_capture.text(),
+                stderr=stderr_capture.text(),
                 duration_seconds=time.monotonic() - started,
+                stdout_bytes=stdout_capture.total,
+                stderr_bytes=stderr_capture.total,
+                stdout_truncated=stdout_capture.truncated,
+                stderr_truncated=stderr_capture.truncated,
             )
-        except subprocess.TimeoutExpired as timeout:
+        except subprocess.TimeoutExpired:
             diagnostics = _terminate_process_tree(root_process)
             try:
-                stdout_bytes, stderr_bytes = process.communicate(timeout=2)
-            except subprocess.TimeoutExpired as cleanup_timeout:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
                 diagnostics.append("Process pipes remained open after tree termination.")
                 try:
                     process.kill()
                 except OSError as exc:
                     diagnostics.append(f"Could not kill root process {process.pid}: {exc}")
-                stdout_bytes = cleanup_timeout.stdout or timeout.stdout or b""
-                stderr_bytes = cleanup_timeout.stderr or timeout.stderr or b""
-            stderr = stderr_bytes.decode("utf-8", errors="replace")
+            _finish_capture(process, threads)
+            stderr = stderr_capture.text()
             if diagnostics:
                 separator = "\n" if stderr and not stderr.endswith("\n") else ""
                 stderr += separator + "\n".join(diagnostics)
             return ExecutionResult(
                 command=command,
                 return_code=None,
-                stdout=stdout_bytes.decode("utf-8", errors="replace"),
+                stdout=stdout_capture.text(),
                 stderr=stderr,
                 duration_seconds=time.monotonic() - started,
                 timed_out=True,
                 termination_diagnostics=diagnostics,
+                stdout_bytes=stdout_capture.total,
+                stderr_bytes=stderr_capture.total,
+                stdout_truncated=stdout_capture.truncated,
+                stderr_truncated=stderr_capture.truncated,
             )
         except OSError as exc:
+            message = str(exc)
             return ExecutionResult(
                 command=command,
                 return_code=None,
                 stdout="",
-                stderr=str(exc),
+                stderr=message,
                 duration_seconds=time.monotonic() - started,
+                stderr_bytes=len(message.encode("utf-8")),
             )

@@ -19,7 +19,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - Deterministic run-to-run comparison in terminal or JSON form
 - Terminal, JSON, and self-contained HTML reports
 - Preflight submission auditing for scope, links, reparse points, size, and sensitive filenames
-- Process-tree timeout cleanup plus unified local-path redaction in every report format
+- Bounded process output, process-tree timeout cleanup, and unified path redaction
 - Integrity-checked, versioned ZIP export and atomic import of portable tasks
 - Two original, runnable Python tasks
 
@@ -217,9 +217,12 @@ material. Read [Security model](docs/security-model.md) before operating a share
 
 Persisted execution evidence includes a sanitized argument vector, exit code, timeout state,
 duration, `<WORKSPACE>` working directory, output artifact names, test-statistics source, and
-termination diagnostics. The same redaction policy is applied to captured output, JSON,
-terminal, HTML, and comparisons; environment variables and tokens are never recorded
-automatically.
+termination diagnostics. It also records the original stdout/stderr byte counts and whether
+either stream was truncated. `LocalExecutor` retains at most 1 MiB per stream by default, split
+between the beginning and end so diagnostics and final test summaries remain useful; Python API
+callers can set independent positive limits. The same redaction policy is applied to captured
+output, JSON, terminal, HTML, and comparisons; environment variables and tokens are never
+recorded automatically.
 
 Detailed workflows: [CLI reference](docs/cli.md),
 [reproducibility](docs/reproducibility.md), [run comparison](docs/run-comparison.md),

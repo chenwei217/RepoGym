@@ -11,3 +11,4 @@ feature documentation.
 
 - [0001: Reproducible task bundles](0001-reproducible-task-bundles.md)
 - [0002: Versioned TaskSpec migrations](0002-versioned-task-spec-migrations.md)
+- [0003: Bounded process output capture](0003-bounded-process-output.md)

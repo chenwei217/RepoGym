@@ -17,7 +17,7 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 | Priority | Need | Acceptance criteria | Likely modules |
 | --- | --- | --- | --- |
-| P1 | Bounded execution output and cancellation | A caller can cancel an execution; stdout/stderr are bounded with explicit truncation evidence; timeout and cancellation clean the same process tree on Windows and Linux. | `executors`, `models`, `grader` |
+| P1 | Cancellable execution | A caller can cancel an execution; timeout and cancellation clean the same process tree on Windows and Linux. | `executors`, `models`, `grader` |
 | P1 | Machine-oriented reports | JUnit XML and SARIF serializers have stable schemas, redact sensitive paths, and carry actionable locations when available. | `reports`, `cli`, `models` |
 | P2 | Cache and incremental execution | Cache keys include task fingerprint, resolved command, and relevant inputs; writes are atomic, corrupt entries recover, and CLI inspection/clearing is tested. | `cache`, `grader`, `cli` |
 | P2 | Stable plugin contracts | Versioned loader, executor, and reporter protocols isolate load failures and have conflict tests plus a minimal example. | `plugins`, `executors`, `reports` |
@@ -26,6 +26,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 - TaskSpec schema version 1 is explicit; unversioned and v0 definitions migrate in memory, and
   unknown versions fail with stable compatibility errors.
+- Local execution drains stdout and stderr into independently configurable bounded buffers while
+  recording original byte counts and truncation evidence.
 - Portable task package format version 1 exports the complete fingerprint input surface with
   hashes and a non-secret environment summary. Import validates archive safety, exact membership,
   integrity, task structure, and fingerprint before atomic publication.
@@ -41,6 +43,6 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 ## Delivery order
 
-Bounded lifecycle controls and machine reports are the next priorities because they build on
-stable task, package, and evidence contracts. Caching and plugins remain later: their contracts
+Cancellation and machine reports are the next priorities because they build on stable task,
+package, execution, and evidence contracts. Caching and plugins remain later: their contracts
 should be designed after those formats are stable.

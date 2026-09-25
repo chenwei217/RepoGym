@@ -81,6 +81,10 @@ class ExecutionResult(BaseModel):
     duration_seconds: float
     timed_out: bool = False
     termination_diagnostics: list[str] = Field(default_factory=list)
+    stdout_bytes: int = Field(default=0, ge=0)
+    stderr_bytes: int = Field(default=0, ge=0)
+    stdout_truncated: bool = False
+    stderr_truncated: bool = False
 
 
 class TestCounts(BaseModel):
@@ -105,6 +109,10 @@ class ExecutionEvidence(BaseModel):
     stderr_file: Literal["stderr.txt"] = "stderr.txt"
     test_statistics_source: Literal["pytest_summary", "unavailable"]
     termination_diagnostics: list[str] = Field(default_factory=list)
+    stdout_bytes: int = Field(default=0, ge=0)
+    stderr_bytes: int = Field(default=0, ge=0)
+    stdout_truncated: bool = False
+    stderr_truncated: bool = False
 
     @model_validator(mode="before")
     @classmethod

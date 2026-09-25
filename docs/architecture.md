@@ -11,8 +11,9 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
    SHA-256 identity.
 5. `security` audits submission trees before copying, records content hashes, and applies the
    shared redaction policy used by persistence and reporting.
-6. `Executor` abstracts command execution; `LocalExecutor` owns the exact child process and
-   uses `psutil` to terminate its descendants on timeout.
+6. `Executor` abstracts command execution; `LocalExecutor` owns the exact child process, drains
+   both pipes into bounded head/tail buffers, and uses `psutil` to terminate descendants on
+   timeout.
 7. `verifier` compares the starter failure count with metadata, applies a strict unified diff,
    and proves the reference result.
 8. `grader` overlays a candidate, runs all and public tests, then persists artifacts and
@@ -41,10 +42,13 @@ The resolved argument vector is executed directly and never through a shell.
 
 `result.json` records the task fingerprint plus sanitized argv, exit code, timeout state,
 duration, `<WORKSPACE>` working directory, output filenames, termination diagnostics, and the
-test-statistics source. `metadata.json` contains the same structured evidence with creation time
-and schema version. Old results using `execution.command` remain readable. Neither file stores
-the original task or submission absolute path. Loading an existing run applies redaction again
-before terminal, JSON, HTML, or comparison rendering.
+test-statistics source. Output evidence includes original byte counts and per-stream truncation
+flags. The executor retains bounded beginnings and endings while continuously draining the child
+pipes, preventing pipe deadlocks and unbounded capture memory without losing the final pytest
+summary. `metadata.json` contains the same structured evidence with creation time and schema
+version. Old results using `execution.command` remain readable. Neither file stores the original
+task or submission absolute path. Loading an existing run applies redaction again before
+terminal, JSON, HTML, or comparison rendering.
 
 The fingerprint incorporates length-prefixed normalized relative paths and file bytes in lexical
 path order. Required inputs are `task.yaml`, prompt/description, `starter/`, public tests, private

@@ -23,3 +23,7 @@ the core suite and bundled-task verification require no network connection.
 
 New production behavior needs a normal-path test, an error-path test, and an integration test
 where it crosses a CLI, filesystem, subprocess, or persisted-artifact boundary.
+
+Executor coverage includes independent stdout/stderr limits, encoded Unicode byte boundaries,
+large single writes, timeout capture, and persisted truncation evidence. Assertions use encoded
+byte counts rather than platform newline assumptions.

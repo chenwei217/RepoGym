@@ -95,6 +95,10 @@ def test_grades_correct_submission_and_writes_artifacts(tmp_path: Path) -> None:
     assert result.execution.stdout_file == "stdout.txt"
     assert result.execution.stderr_file == "stderr.txt"
     assert result.execution.test_statistics_source == "pytest_summary"
+    assert result.execution.stdout_bytes > 0
+    assert result.execution.stderr_bytes == 0
+    assert result.execution.stdout_truncated is False
+    assert result.execution.stderr_truncated is False
     assert "8 passed" in stdout
     assert stderr == ""
     metadata = json.loads((run_dir / "metadata.json").read_text(encoding="utf-8"))

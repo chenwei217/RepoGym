@@ -42,6 +42,69 @@ def test_local_executor_captures_output(tmp_path: Path) -> None:
     )
     assert result.return_code == 0
     assert result.stdout.strip() == "hello"
+    assert result.stdout_bytes == len(result.stdout.encode("utf-8"))
+    assert result.stderr_bytes == 0
+    assert not result.stdout_truncated
+    assert not result.stderr_truncated
+
+
+def test_local_executor_bounds_stdout_and_stderr_independently(tmp_path: Path) -> None:
+    result = LocalExecutor(max_stdout_bytes=20, max_stderr_bytes=10).execute(
+        [
+            sys.executable,
+            "-c",
+            "import os; os.write(1, b'A' * 100); os.write(2, b'B' * 80)",
+        ],
+        tmp_path,
+        timeout_seconds=5,
+    )
+    assert result.return_code == 0
+    assert result.stdout_bytes == 100
+    assert result.stderr_bytes == 80
+    assert result.stdout_truncated
+    assert result.stderr_truncated
+    assert result.stdout.startswith("A" * 10)
+    assert result.stdout.endswith("A" * 10)
+    assert "80 bytes truncated" in result.stdout
+    assert result.stderr.startswith("B" * 5)
+    assert result.stderr.endswith("B" * 5)
+    assert "70 bytes truncated" in result.stderr
+
+
+def test_local_executor_bounds_unicode_by_encoded_bytes(tmp_path: Path) -> None:
+    result = LocalExecutor(max_stdout_bytes=7).execute(
+        [
+            sys.executable,
+            "-c",
+            "import os; os.write(1, ('é' * 10).encode())",
+        ],
+        tmp_path,
+        timeout_seconds=5,
+    )
+    assert result.stdout_bytes == 20
+    assert result.stdout_truncated
+    assert "13 bytes truncated" in result.stdout
+
+
+def test_truncated_output_retains_final_test_summary(tmp_path: Path) -> None:
+    result = LocalExecutor(max_stdout_bytes=48).execute(
+        [
+            sys.executable,
+            "-c",
+            "import os; os.write(1, b'x' * 100 + b'\\n8 passed in 0.1s\\n')",
+        ],
+        tmp_path,
+        timeout_seconds=5,
+    )
+    assert result.stdout_truncated
+    assert parse_test_counts(result) == Counts(passed=8, failed=0, total=8)
+
+
+def test_local_executor_rejects_nonpositive_output_limits() -> None:
+    with pytest.raises(ValueError, match="positive"):
+        LocalExecutor(max_stdout_bytes=0)
+    with pytest.raises(ValueError, match="positive"):
+        LocalExecutor(max_stderr_bytes=-1)
 
 
 def test_local_executor_times_out(tmp_path: Path) -> None:
@@ -50,6 +113,23 @@ def test_local_executor_times_out(tmp_path: Path) -> None:
     )
     assert result.timed_out
     assert result.return_code is None
+
+
+def test_local_executor_retains_bounded_output_on_timeout(tmp_path: Path) -> None:
+    result = LocalExecutor(max_stdout_bytes=16).execute(
+        [
+            sys.executable,
+            "-c",
+            "import os, time; os.write(1, b'x' * 64); time.sleep(60)",
+        ],
+        tmp_path,
+        timeout_seconds=1,
+    )
+    assert result.timed_out
+    assert result.stdout_bytes == 64
+    assert result.stdout_truncated
+    assert result.stdout.startswith("x" * 8)
+    assert result.stdout.endswith("x" * 8)
 
 
 def test_local_executor_terminates_timed_out_process_tree(tmp_path: Path) -> None:

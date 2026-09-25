@@ -5,9 +5,11 @@
 RepoGym treats task metadata, paths, and submission file trees as untrusted data, but the MVP
 does **not** safely contain executable code. `LocalExecutor` starts the configured command with
 `shell=False`, captures output with replacement decoding, and enforces a wall-clock timeout.
-On timeout it uses `psutil` to terminate the exact child process and the descendants discovered
-from that process, escalating from terminate to kill when necessary. The process nevertheless has
-the invoking user's filesystem, network, process, and credential access. Process-tree cleanup is
+Stdout and stderr are continuously drained into independent bounded head/tail buffers (1 MiB per
+stream by default), with original byte counts and truncation flags retained as evidence. On
+timeout RepoGym uses `psutil` to terminate the exact child process and the descendants discovered
+from that process, escalating from terminate to kill when necessary. The process nevertheless
+has the invoking user's filesystem, network, process, and credential access. These controls are
 not a security sandbox or an OS resource boundary.
 
 Only run tasks and submissions you trust. For unknown code, use a disposable virtual machine or
@@ -26,6 +28,7 @@ secrets, restricted networking, and a dedicated unprivileged identity.
   precedence from silently selecting a different interpreter; explicitly configured absolute
   interpreter paths and other commands remain unchanged;
 - timed-out local commands have their recorded process trees terminated without name-based kills;
+- process output is memory-bounded without stopping pipe drainage, including during timeout;
 - temporary workspaces are managed by the standard library and cleaned on exit;
 - Jinja autoescaping protects the HTML report from task output injection.
 - absolute paths are redacted consistently from persisted artifacts and all report formats;

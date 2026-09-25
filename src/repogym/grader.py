@@ -93,6 +93,10 @@ def grade_submission(
             stderr_file="stderr.txt",
             test_statistics_source="pytest_summary",
             termination_diagnostics=all_result.termination_diagnostics,
+            stdout_bytes=all_result.stdout_bytes,
+            stderr_bytes=all_result.stderr_bytes,
+            stdout_truncated=all_result.stdout_truncated,
+            stderr_truncated=all_result.stderr_truncated,
         )
         result = GradeResult(
             task_id=task.id,

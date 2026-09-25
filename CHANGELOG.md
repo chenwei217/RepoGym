@@ -8,6 +8,7 @@ Changelog, and versions follow Semantic Versioning.
 ### Added
 
 - Versioned TaskSpec schemas with deterministic legacy migration and future-version rejection
+- Memory-bounded stdout and stderr capture with byte counts and truncation evidence
 - Deterministic SHA-256 task fingerprints persisted with run metadata
 - `repogym doctor` environment diagnostics
 - Terminal and JSON comparison of persisted grading runs
