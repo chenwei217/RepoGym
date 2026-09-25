@@ -9,7 +9,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 
 ## Features
 
-- Strict Pydantic validation for task metadata and path constraints
+- Versioned TaskSpec validation with backward-compatible schema migration
 - Public and private pytest suites with reference-solution verification
 - SHA-256 task fingerprints over every versioned task input, including the reference patch
 - Environment diagnostics for commands, dependencies, working directories, and test discovery
@@ -145,6 +145,7 @@ tasks/my-task/
 ```
 
 ```yaml
+schema_version: 1
 id: my-task
 title: Repair an edge case
 difficulty: medium
@@ -169,6 +170,11 @@ constraints:
 ```
 
 See [Task authoring](docs/task-authoring.md) for the complete design guidance.
+
+`schema_version` identifies the task file format and is separate from the task content's
+`version`. Newly authored tasks must use schema version 1. Definitions created before schema
+versioning, which omit the field or explicitly use version 0, are migrated in memory without
+rewriting their files. RepoGym rejects unknown future versions rather than guessing their meaning.
 
 ## Scoring model
 

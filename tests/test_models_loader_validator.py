@@ -7,13 +7,62 @@ import pytest
 from repogym.exceptions import TaskLoadError
 from repogym.loader import load_task
 from repogym.models import ExecutionEvidence, ExecutionSpec, ScoringSpec
+from repogym.spec_schema import CURRENT_TASK_SCHEMA_VERSION, migrate_task_spec
 from repogym.validator import validate_task
 
 
 def test_loads_valid_task(valid_task: Path) -> None:
     task = load_task(valid_task)
+    assert task.schema_version == CURRENT_TASK_SCHEMA_VERSION
     assert task.id == "sample-task"
     assert task.scoring.correctness.weight == 60
+
+
+def test_loads_unversioned_legacy_task_as_current_schema(valid_task: Path) -> None:
+    path = valid_task / "task.yaml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("schema_version: 1\n", "", 1),
+        encoding="utf-8",
+    )
+    assert load_task(valid_task).schema_version == CURRENT_TASK_SCHEMA_VERSION
+
+
+def test_loads_explicit_legacy_schema_version(valid_task: Path) -> None:
+    path = valid_task / "task.yaml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("schema_version: 1", "schema_version: 0"),
+        encoding="utf-8",
+    )
+    assert load_task(valid_task).schema_version == CURRENT_TASK_SCHEMA_VERSION
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        ("2", "Unsupported task schema version: 2"),
+        ('"1"', "expected an integer"),
+        ("true", "expected an integer"),
+    ],
+)
+def test_rejects_unknown_or_invalid_schema_versions(
+    valid_task: Path, value: str, message: str
+) -> None:
+    path = valid_task / "task.yaml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("schema_version: 1", f"schema_version: {value}"),
+        encoding="utf-8",
+    )
+    with pytest.raises(TaskLoadError, match=message):
+        load_task(valid_task)
+
+
+def test_task_schema_migration_is_idempotent() -> None:
+    legacy = {"id": "sample-task"}
+    once = migrate_task_spec(legacy)
+    twice = migrate_task_spec(once)
+    assert once == {"schema_version": CURRENT_TASK_SCHEMA_VERSION, "id": "sample-task"}
+    assert twice == once
+    assert "schema_version" not in legacy
 
 
 def test_rejects_missing_directory(tmp_path: Path) -> None:

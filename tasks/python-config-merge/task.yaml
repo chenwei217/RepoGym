@@ -1,3 +1,4 @@
+schema_version: 1
 id: python-config-merge
 title: Make configuration merging recursive and immutable
 difficulty: medium

@@ -60,6 +60,7 @@ class ConstraintSpec(StrictModel):
 
 
 class TaskSpec(StrictModel):
+    schema_version: Literal[1]
     id: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
     title: str = Field(min_length=1)
     difficulty: Literal["easy", "medium", "hard"]

@@ -1,5 +1,16 @@
 # Task authoring
 
+## Schema and task versions
+
+New `task.yaml` files start with `schema_version: 1`. This integer identifies the structure of
+the YAML document. The separate `version` field identifies the task content and should change
+when prompts, inputs, tests, or scoring expectations change.
+
+For compatibility, an omitted `schema_version` or an explicit value of `0` is migrated in
+memory to version 1. Loading never rewrites the source file. Unknown versions and non-integer
+values fail before field validation with a stable version error, preventing a newer schema from
+being silently interpreted using older rules.
+
 ## Start with an observable contract
 
 Describe inputs, outputs, error behavior, and boundary semantics before writing tests. Avoid

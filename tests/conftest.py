@@ -25,7 +25,8 @@ def valid_task(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (task / "task.yaml").write_text(
-        """id: sample-task
+        """schema_version: 1
+id: sample-task
 title: Sample task
 difficulty: easy
 language: python

@@ -2,7 +2,7 @@
 
 RepoGym uses a linear pipeline with small modules and explicit data models.
 
-1. `loader` parses YAML into strict Pydantic models.
+1. `loader` migrates versioned task mappings and parses them into strict Pydantic models.
 2. `validator` checks layout, safe relative paths, test discovery, and constraint overlap.
 3. `doctor` inspects the local Python runtime, command, dependencies, working directory, and
    discovered tests without executing candidate code. It uses the same resolved command as the
@@ -54,10 +54,10 @@ line-ending or encoding changes visible.
 
 ## Current architectural boundaries
 
-Task definitions and run artifacts are versioned independently: `TaskSpec.version` describes a
-task contract, while result loading contains an explicit compatibility adapter for the original
-execution-evidence field name. There is not yet a general TaskSpec schema migration registry.
-Task inputs can also be exported as package format version 1. Import accepts exactly the members
-declared by the manifest and publishes a task only after archive safety, content integrity,
-TaskSpec validation, and full fingerprint verification succeed. A general TaskSpec schema
-migration registry remains future work and is tracked in the engineering roadmap.
+Task definitions and run artifacts are versioned independently. `TaskSpec.schema_version`
+selects the YAML format and its migration path, while `TaskSpec.version` describes the task
+contract. Unversioned and explicit v0 definitions normalize in memory to v1; unknown future
+versions are rejected. Result loading separately adapts the original execution-evidence field
+name. Task inputs can also be exported as package format version 1. Import accepts exactly the
+members declared by the manifest and publishes a task only after archive safety, content
+integrity, TaskSpec validation, and full fingerprint verification succeed.

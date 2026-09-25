@@ -8,6 +8,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from repogym.exceptions import TaskLoadError
 from repogym.models import TaskSpec
+from repogym.spec_schema import migrate_task_spec
 
 
 def load_task(task_directory: Path) -> TaskSpec:
@@ -23,6 +24,7 @@ def load_task(task_directory: Path) -> TaskSpec:
         raise TaskLoadError(f"Could not read task.yaml: {exc}") from exc
     if not isinstance(raw, dict):
         raise TaskLoadError("task.yaml must contain a YAML mapping")
+    raw = migrate_task_spec(raw)
     try:
         task = TaskSpec.model_validate(raw)
     except PydanticValidationError as exc:
