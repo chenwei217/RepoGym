@@ -186,7 +186,7 @@ def test_publication_retries_transient_windows_permission_error(
             raise PermissionError("scanner lock")
         original(source, target)
 
-    monkeypatch.setattr(cache_module.os, "name", "nt")
+    monkeypatch.setattr(cache_module, "_WINDOWS", True)
     monkeypatch.setattr(cache_module.os, "rename", transient)
     cache.store("9" * 64, _fake_run(tmp_path / "runs"))
 

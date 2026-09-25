@@ -25,6 +25,7 @@ from repogym.security import file_manifest
 
 CACHE_SCHEMA_VERSION = 1
 MANIFEST_NAME = "cache-manifest.json"
+_WINDOWS = os.name == "nt"
 
 
 @dataclass(frozen=True)
@@ -43,7 +44,7 @@ def _publish_directory(source: Path, target: Path) -> None:
             os.rename(source, target)
             return
         except PermissionError:
-            if os.name != "nt" or attempt == 7:
+            if not _WINDOWS or attempt == 7:
                 raise
             time.sleep(delay)
             delay = min(delay * 2, 0.1)
