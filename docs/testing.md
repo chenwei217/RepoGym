@@ -27,3 +27,7 @@ where it crosses a CLI, filesystem, subprocess, or persisted-artifact boundary.
 Executor coverage includes independent stdout/stderr limits, encoded Unicode byte boundaries,
 large single writes, timeout capture, and persisted truncation evidence. Assertions use encoded
 byte counts rather than platform newline assumptions.
+
+Cancellation tests cover pre-cancelled tokens, repeated cancellation, completed and abnormal
+exits, nested child cleanup, verification interruption, and persisted grading status. Timeout and
+cancellation assertions run on both Windows and Ubuntu to protect their shared cleanup semantics.

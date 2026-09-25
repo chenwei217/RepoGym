@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
 import psutil
 import pytest
 
-from repogym.executors.local import LocalExecutor
+from repogym.executors import CancellationToken, LocalExecutor
 from repogym.loader import load_task
 from repogym.models import ExecutionResult
 from repogym.models import TestCounts as Counts
@@ -112,7 +113,64 @@ def test_local_executor_times_out(tmp_path: Path) -> None:
         [sys.executable, "-c", "import time; time.sleep(1)"], tmp_path, timeout_seconds=0.01
     )
     assert result.timed_out
+    assert not result.cancelled
     assert result.return_code is None
+
+
+def test_local_executor_skips_launch_when_already_cancelled(tmp_path: Path) -> None:
+    marker = tmp_path / "started"
+    token = CancellationToken()
+    token.cancel()
+    token.cancel()
+    result = LocalExecutor().execute(
+        [sys.executable, "-c", f"open({str(marker)!r}, 'w').write('started')"],
+        tmp_path,
+        timeout_seconds=5,
+        cancellation_token=token,
+    )
+    assert result.cancelled
+    assert not result.timed_out
+    assert result.return_code is None
+    assert not marker.exists()
+
+
+def test_local_executor_cancellation_terminates_nested_process_tree(tmp_path: Path) -> None:
+    child_pid_file = tmp_path / "cancelled-child.pid"
+    parent_code = (
+        "import subprocess, sys, time\n"
+        "child = subprocess.Popen([sys.executable, '-c', "
+        "'import time; time.sleep(60)'])\n"
+        f"open({str(child_pid_file)!r}, 'w', encoding='utf-8').write(str(child.pid))\n"
+        "time.sleep(60)\n"
+    )
+    token = CancellationToken()
+    results: list[ExecutionResult] = []
+    worker = threading.Thread(
+        target=lambda: results.append(
+            LocalExecutor().execute(
+                [sys.executable, "-c", parent_code],
+                tmp_path,
+                timeout_seconds=30,
+                cancellation_token=token,
+            )
+        )
+    )
+    worker.start()
+    deadline = time.monotonic() + 5
+    while not child_pid_file.is_file() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert child_pid_file.is_file()
+    child_pid = int(child_pid_file.read_text(encoding="utf-8"))
+    token.cancel()
+    token.cancel()
+    worker.join(timeout=5)
+    assert not worker.is_alive()
+    assert results[0].cancelled
+    assert not results[0].timed_out
+    deadline = time.monotonic() + 3
+    while psutil.pid_exists(child_pid) and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert not psutil.pid_exists(child_pid)
 
 
 def test_local_executor_retains_bounded_output_on_timeout(tmp_path: Path) -> None:
@@ -185,6 +243,7 @@ def test_local_executor_retains_termination_diagnostics(
 def test_local_executor_handles_missing_program(tmp_path: Path) -> None:
     result = LocalExecutor().execute(["definitely-not-a-real-program"], tmp_path, 1)
     assert result.return_code is None
+    assert not result.cancelled
     assert result.stderr
 
 
@@ -199,9 +258,14 @@ def test_local_executor_preserves_non_utf8_output_safely(tmp_path: Path) -> None
 
 
 def test_local_executor_records_nonzero_exit(tmp_path: Path) -> None:
-    result = LocalExecutor().execute([sys.executable, "-c", "raise SystemExit(7)"], tmp_path, 5)
+    token = CancellationToken()
+    result = LocalExecutor().execute(
+        [sys.executable, "-c", "raise SystemExit(7)"], tmp_path, 5, token
+    )
+    token.cancel()
     assert result.return_code == 7
     assert not result.timed_out
+    assert not result.cancelled
 
 
 def test_parses_pytest_counts() -> None:

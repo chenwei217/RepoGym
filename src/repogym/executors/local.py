@@ -12,6 +12,7 @@ from typing import BinaryIO
 
 import psutil
 
+from repogym.executors.base import CancellationToken
 from repogym.models import ExecutionResult
 
 DEFAULT_OUTPUT_LIMIT_BYTES = 1024 * 1024
@@ -85,6 +86,26 @@ def _finish_capture(process: subprocess.Popen[bytes], threads: list[threading.Th
             thread.join(timeout=0.5)
 
 
+def _wait_for_stop_reason(
+    process: subprocess.Popen[bytes],
+    timeout_seconds: int,
+    cancellation_token: CancellationToken | None,
+) -> str | None:
+    deadline = time.monotonic() + timeout_seconds
+    while process.poll() is None:
+        if cancellation_token is not None and cancellation_token.cancelled:
+            return "cancelled"
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return "timed_out"
+        interval = min(0.05, remaining)
+        if cancellation_token is None:
+            time.sleep(interval)
+        else:
+            cancellation_token.wait(interval)
+    return None
+
+
 def _terminate_process_tree(root: psutil.Process) -> list[str]:
     """Terminate only ``root`` and descendants captured from its process tree."""
     diagnostics: list[str] = []
@@ -132,8 +153,23 @@ class LocalExecutor:
         self.max_stdout_bytes = max_stdout_bytes
         self.max_stderr_bytes = max_stderr_bytes
 
-    def execute(self, command: list[str], cwd: Path, timeout_seconds: int) -> ExecutionResult:
+    def execute(
+        self,
+        command: list[str],
+        cwd: Path,
+        timeout_seconds: int,
+        cancellation_token: CancellationToken | None = None,
+    ) -> ExecutionResult:
         started = time.monotonic()
+        if cancellation_token is not None and cancellation_token.cancelled:
+            return ExecutionResult(
+                command=command,
+                return_code=None,
+                stdout="",
+                stderr="",
+                duration_seconds=time.monotonic() - started,
+                cancelled=True,
+            )
         environment = os.environ.copy()
         stdout_capture = _BoundedCapture(self.max_stdout_bytes)
         stderr_capture = _BoundedCapture(self.max_stderr_bytes)
@@ -154,21 +190,10 @@ class LocalExecutor:
             )
             root_process = psutil.Process(process.pid)
             threads = _start_capture_threads(process, stdout_capture, stderr_capture)
-            process.wait(timeout=timeout_seconds)
-            _finish_capture(process, threads)
-            return ExecutionResult(
-                command=command,
-                return_code=process.returncode,
-                stdout=stdout_capture.text(),
-                stderr=stderr_capture.text(),
-                duration_seconds=time.monotonic() - started,
-                stdout_bytes=stdout_capture.total,
-                stderr_bytes=stderr_capture.total,
-                stdout_truncated=stdout_capture.truncated,
-                stderr_truncated=stderr_capture.truncated,
-            )
-        except subprocess.TimeoutExpired:
-            diagnostics = _terminate_process_tree(root_process)
+            stop_reason = _wait_for_stop_reason(process, timeout_seconds, cancellation_token)
+            diagnostics: list[str] = []
+            if stop_reason is not None:
+                diagnostics = _terminate_process_tree(root_process)
             try:
                 process.wait(timeout=2)
             except subprocess.TimeoutExpired:
@@ -184,11 +209,12 @@ class LocalExecutor:
                 stderr += separator + "\n".join(diagnostics)
             return ExecutionResult(
                 command=command,
-                return_code=None,
+                return_code=process.returncode if stop_reason is None else None,
                 stdout=stdout_capture.text(),
                 stderr=stderr,
                 duration_seconds=time.monotonic() - started,
-                timed_out=True,
+                timed_out=stop_reason == "timed_out",
+                cancelled=stop_reason == "cancelled",
                 termination_diagnostics=diagnostics,
                 stdout_bytes=stdout_capture.total,
                 stderr_bytes=stderr_capture.total,

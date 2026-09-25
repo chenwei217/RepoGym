@@ -17,7 +17,6 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 | Priority | Need | Acceptance criteria | Likely modules |
 | --- | --- | --- | --- |
-| P1 | Cancellable execution | A caller can cancel an execution; timeout and cancellation clean the same process tree on Windows and Linux. | `executors`, `models`, `grader` |
 | P1 | Machine-oriented reports | JUnit XML and SARIF serializers have stable schemas, redact sensitive paths, and carry actionable locations when available. | `reports`, `cli`, `models` |
 | P2 | Cache and incremental execution | Cache keys include task fingerprint, resolved command, and relevant inputs; writes are atomic, corrupt entries recover, and CLI inspection/clearing is tested. | `cache`, `grader`, `cli` |
 | P2 | Stable plugin contracts | Versioned loader, executor, and reporter protocols isolate load failures and have conflict tests plus a minimal example. | `plugins`, `executors`, `reports` |
@@ -28,6 +27,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   unknown versions fail with stable compatibility errors.
 - Local execution drains stdout and stderr into independently configurable bounded buffers while
   recording original byte counts and truncation evidence.
+- A thread-safe cancellation token stops launches or active process trees, records a distinct
+  cancelled result, and prevents remaining grading commands from starting.
 - Portable task package format version 1 exports the complete fingerprint input surface with
   hashes and a non-secret environment summary. Import validates archive safety, exact membership,
   integrity, task structure, and fingerprint before atomic publication.
@@ -43,6 +44,6 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 ## Delivery order
 
-Cancellation and machine reports are the next priorities because they build on stable task,
-package, execution, and evidence contracts. Caching and plugins remain later: their contracts
-should be designed after those formats are stable.
+Machine reports are the next priority because they build on stable task, package, execution, and
+evidence contracts. Caching and plugins remain later: their contracts should be designed after
+those formats are stable.

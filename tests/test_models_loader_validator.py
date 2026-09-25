@@ -122,6 +122,7 @@ def test_execution_evidence_round_trips_and_reads_legacy_command() -> None:
     evidence = ExecutionEvidence.model_validate(legacy)
     assert evidence.argv == ["python", "-m", "pytest"]
     assert evidence.command == evidence.argv
+    assert evidence.cancelled is False
     serialized = evidence.model_dump(mode="json")
     assert "command" not in serialized
     assert serialized["working_directory"] == "<WORKSPACE>"

@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from repogym.executors.base import Executor
+from repogym.executors.base import CancellationToken, Executor
 from repogym.models import DimensionResult, ExecutionResult, TaskSpec, TestCounts
 from repogym.security import path_matches
 
@@ -65,6 +65,7 @@ def score_quality(
     workspace: Path,
     changed: list[str],
     executor: Executor,
+    cancellation_token: CancellationToken | None = None,
 ) -> DimensionResult:
     weight = task.scoring.code_quality.weight
     python_files = [
@@ -82,9 +83,18 @@ def score_quality(
             syntax_ok = False
             break
     syntax_points = weight / 2 if syntax_ok else 0.0
-    lint: ExecutionResult = executor.execute(
-        ["ruff", "check", "--quiet", *python_files], workspace, task.execution.timeout_seconds
-    )
+    command = ["ruff", "check", "--quiet", *python_files]
+    if cancellation_token is None:
+        lint: ExecutionResult = executor.execute(command, workspace, task.execution.timeout_seconds)
+    else:
+        lint = executor.execute(
+            command,
+            workspace,
+            task.execution.timeout_seconds,
+            cancellation_token=cancellation_token,
+        )
+    if lint.cancelled:
+        return DimensionResult(score=0, max_score=weight, reason="Execution cancelled.")
     lint_ok = not lint.timed_out and lint.return_code == 0
     lint_points = weight / 2 if lint_ok else 0.0
     reason = (

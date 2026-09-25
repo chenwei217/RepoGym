@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from repogym.exceptions import ValidationError
-from repogym.executors.base import Executor
+from repogym.executors.base import CancellationToken, Executor
 from repogym.executors.local import LocalExecutor
 from repogym.models import ExecutionResult
 from repogym.patching import apply_patch, patch_paths
@@ -34,7 +34,11 @@ def _matches(path: str, pattern: str) -> bool:
     return fnmatch.fnmatchcase(path, normalized)
 
 
-def verify_task(task_directory: Path, executor: Executor | None = None) -> VerificationReport:
+def verify_task(
+    task_directory: Path,
+    executor: Executor | None = None,
+    cancellation_token: CancellationToken | None = None,
+) -> VerificationReport:
     validation = validate_task(task_directory)
     if not validation.valid or validation.task is None:
         raise ValidationError("Task validation failed:\n  - " + "\n  - ".join(validation.errors))
@@ -55,8 +59,10 @@ def verify_task(task_directory: Path, executor: Executor | None = None) -> Verif
         workspace = Path(temporary) / "workspace"
         copy_tree_safe(task_dir / "starter", workspace)
         inject_tests(task_dir, workspace)
-        initial = run_tests(task, workspace, runner)
+        initial = run_tests(task, workspace, runner, cancellation_token=cancellation_token)
         initial_counts = parse_test_counts(initial)
+        if initial.cancelled:
+            raise ValidationError("Initial test run was cancelled")
         if initial.timed_out:
             raise ValidationError("Initial test run timed out")
         if initial_counts.failed != task.expected.failing_tests_before:
@@ -65,8 +71,10 @@ def verify_task(task_directory: Path, executor: Executor | None = None) -> Verif
                 f"expected {task.expected.failing_tests_before}, got {initial_counts.failed}"
             )
         apply_patch(workspace, patch_text)
-        fixed = run_tests(task, workspace, runner)
+        fixed = run_tests(task, workspace, runner, cancellation_token=cancellation_token)
         fixed_counts = parse_test_counts(fixed)
+        if fixed.cancelled:
+            raise ValidationError("Reference solution test run was cancelled")
         if fixed.timed_out:
             raise ValidationError("Reference solution test run timed out")
         if fixed.return_code != 0 or fixed_counts.failed != 0:

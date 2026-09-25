@@ -27,7 +27,8 @@ secrets, restricted networking, and a dedicated unprivileged identity.
 - exact `python` and `python.exe` launchers are bound to `sys.executable`, preventing `PATH`
   precedence from silently selecting a different interpreter; explicitly configured absolute
   interpreter paths and other commands remain unchanged;
-- timed-out local commands have their recorded process trees terminated without name-based kills;
+- timed-out and cooperatively cancelled commands have their recorded process trees terminated
+  without name-based kills;
 - process output is memory-bounded without stopping pipe drainage, including during timeout;
 - temporary workspaces are managed by the standard library and cleaned on exit;
 - Jinja autoescaping protects the HTML report from task output injection.
@@ -40,3 +41,7 @@ confirm which interpreter it checked. Persisted run artifacts still redact that 
 
 These controls prevent common accidental escapes and report injection. They are not a substitute
 for OS-level isolation. A Docker executor is planned but not implemented.
+
+Cancellation is cooperative at the RepoGym API boundary: another thread or signal adapter must
+call `CancellationToken.cancel()`. It is not an authorization boundary and cannot revoke files,
+network operations, or other side effects completed before the process tree is stopped.

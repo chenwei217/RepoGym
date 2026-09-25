@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from repogym.cli import app
 from repogym.exceptions import ReportError, SecurityError, ValidationError
+from repogym.executors import CancellationToken
 from repogym.grader import grade_submission
 from repogym.models import ExecutionResult
 from repogym.reports import generate_report, load_run
@@ -75,6 +76,13 @@ def test_verify_rejects_forbidden_reference_patch(valid_task: Path) -> None:
         verify_task(valid_task)
 
 
+def test_verify_honors_precancelled_token(valid_task: Path) -> None:
+    token = CancellationToken()
+    token.cancel()
+    with pytest.raises(ValidationError, match="cancelled"):
+        verify_task(valid_task, cancellation_token=token)
+
+
 def test_grades_correct_submission_and_writes_artifacts(tmp_path: Path) -> None:
     run_dir = grade_submission(
         ROOT / "tasks" / "python-cache-ttl",
@@ -114,6 +122,25 @@ def test_grades_correct_submission_and_writes_artifacts(tmp_path: Path) -> None:
         "stderr.txt",
         "stdout.txt",
     }
+
+
+def test_grade_persists_cancelled_status_without_followup_commands(tmp_path: Path) -> None:
+    token = CancellationToken()
+    token.cancel()
+    run_dir = grade_submission(
+        ROOT / "tasks" / "python-cache-ttl",
+        ROOT / "examples" / "submissions" / "cache-ttl-fixed",
+        tmp_path / "runs",
+        cancellation_token=token,
+    )
+    result, stdout, stderr = load_run(run_dir)
+    assert result.status == "cancelled"
+    assert result.score == 0
+    assert result.execution is not None
+    assert result.execution.cancelled
+    assert not result.execution.timed_out
+    assert stdout == ""
+    assert stderr == ""
 
 
 def metadata_fingerprint(run_dir: Path) -> str:

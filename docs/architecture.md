@@ -13,7 +13,7 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
    shared redaction policy used by persistence and reporting.
 6. `Executor` abstracts command execution; `LocalExecutor` owns the exact child process, drains
    both pipes into bounded head/tail buffers, and uses `psutil` to terminate descendants on
-   timeout.
+   timeout or cooperative cancellation.
 7. `verifier` compares the starter failure count with metadata, applies a strict unified diff,
    and proves the reference result.
 8. `grader` overlays a candidate, runs all and public tests, then persists artifacts and
@@ -39,6 +39,13 @@ Command resolution tokenizes the configured string once. An exact first token of
 the two paths cannot select different Python installations through `PATH`. Absolute Python
 paths, alternate interpreter names, and all other commands retain their configured first token.
 The resolved argument vector is executed directly and never through a shell.
+
+`CancellationToken` is a thread-safe one-way signal in the public executor protocol. A token set
+before launch produces a cancelled result without starting a process. During execution the local
+backend polls the token and timeout deadline, giving a completed process precedence when both are
+observed together, then routes cancellation and timeout through the same terminate/wait/kill
+cleanup. Verification reports cancellation as a domain error; grading persists a zero-score
+cancelled result and does not launch remaining test or quality commands.
 
 `result.json` records the task fingerprint plus sanitized argv, exit code, timeout state,
 duration, `<WORKSPACE>` working directory, output filenames, termination diagnostics, and the

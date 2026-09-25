@@ -20,6 +20,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - Terminal, JSON, and self-contained HTML reports
 - Preflight submission auditing for scope, links, reparse points, size, and sensitive filenames
 - Bounded process output, process-tree timeout cleanup, and unified path redaction
+- Cooperative cancellation with the same cross-platform process-tree cleanup as timeouts
 - Integrity-checked, versioned ZIP export and atomic import of portable tasks
 - Two original, runnable Python tasks
 
@@ -206,6 +207,21 @@ flowchart TD
 The `Executor` protocol separates orchestration from process execution. The current release
 ships a `LocalExecutor`; a future container executor can implement the same interface. More
 detail is in [Architecture](docs/architecture.md).
+
+Python callers can cooperatively stop local execution with a thread-safe token:
+
+```python
+from repogym.executors import CancellationToken, LocalExecutor
+
+token = CancellationToken()
+# Call token.cancel() from a signal handler or coordinating thread.
+result = LocalExecutor().execute(command, workspace, 60, cancellation_token=token)
+assert result.cancelled or result.return_code is not None
+```
+
+Cancellation is idempotent. A token cancelled before launch prevents the child from starting;
+during execution it terminates the same captured process tree as a timeout. Results distinguish
+`cancelled`, `timed_out`, nonzero exits, and launch failures.
 
 ## Security model
 

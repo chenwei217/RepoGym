@@ -80,6 +80,7 @@ class ExecutionResult(BaseModel):
     stderr: str
     duration_seconds: float
     timed_out: bool = False
+    cancelled: bool = False
     termination_diagnostics: list[str] = Field(default_factory=list)
     stdout_bytes: int = Field(default=0, ge=0)
     stderr_bytes: int = Field(default=0, ge=0)
@@ -103,6 +104,7 @@ class ExecutionEvidence(BaseModel):
     argv: list[str] = Field(default_factory=list)
     exit_code: int | None
     timed_out: bool
+    cancelled: bool = False
     duration_seconds: float = Field(default=0.0, ge=0)
     working_directory: Literal["<WORKSPACE>"] = "<WORKSPACE>"
     stdout_file: Literal["stdout.txt"] = "stdout.txt"
@@ -134,7 +136,7 @@ class GradeResult(BaseModel):
     task_id: str
     task_fingerprint: str | None = None
     run_id: str
-    status: Literal["completed", "timed_out", "error"]
+    status: Literal["completed", "timed_out", "cancelled", "error"]
     score: float
     dimensions: dict[str, DimensionResult]
     tests: TestCounts

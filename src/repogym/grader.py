@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import Literal
 
 from repogym.exceptions import SecurityError, ValidationError
-from repogym.executors.base import Executor
+from repogym.executors.base import CancellationToken, Executor
 from repogym.executors.local import LocalExecutor
-from repogym.models import ExecutionEvidence, GradeResult
+from repogym.models import DimensionResult, ExecutionEvidence, GradeResult, TaskSpec, TestCounts
 from repogym.reproducibility import task_fingerprint
 from repogym.scoring import score_correctness, score_quality, score_regression, score_scope
 from repogym.security import (
@@ -32,11 +32,24 @@ def _write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+def _cancelled_dimensions(task: TaskSpec) -> dict[str, DimensionResult]:
+    def dimension(max_score: int) -> DimensionResult:
+        return DimensionResult(score=0, max_score=max_score, reason="Execution cancelled.")
+
+    return {
+        "correctness": dimension(task.scoring.correctness.weight),
+        "regression_safety": dimension(task.scoring.regression_safety.weight),
+        "code_quality": dimension(task.scoring.code_quality.weight),
+        "scope_control": dimension(task.scoring.scope_control.weight),
+    }
+
+
 def grade_submission(
     task_directory: Path,
     submission: Path,
     output_root: Path = Path(".repogym/runs"),
     executor: Executor | None = None,
+    cancellation_token: CancellationToken | None = None,
 ) -> Path:
     validation = validate_task(task_directory)
     if not validation.valid or validation.task is None:
@@ -61,32 +74,46 @@ def grade_submission(
         submitted = file_manifest(workspace)
         changed = changed_paths(original, submitted)
         inject_tests(task_directory.resolve(), workspace)
-        all_result = run_tests(task, workspace, runner)
-        public_result = run_tests(task, workspace, runner, "tests/public")
+        all_result = run_tests(task, workspace, runner, cancellation_token=cancellation_token)
         all_counts = parse_test_counts(all_result)
         expected_total = task.expected.passing_tests_after
         all_counts.passed = min(all_counts.passed, expected_total)
         all_counts.total = expected_total
         all_counts.failed = expected_total - all_counts.passed
-        public_counts = parse_test_counts(public_result)
-        dimensions = {
-            "correctness": score_correctness(task, all_counts),
-            "regression_safety": score_regression(task, public_counts),
-            "code_quality": score_quality(task, workspace, changed, runner),
-        }
         scope, violations = score_scope(task, changed)
-        dimensions["scope_control"] = scope
-        status: Literal["completed", "timed_out", "error"] = (
-            "timed_out" if all_result.timed_out else "completed"
-        )
-        if all_result.return_code is None and not all_result.timed_out:
-            status = "error"
+        cancelled = all_result.cancelled
+        public_result = None
+        quality = None
+        if not cancelled:
+            public_result = run_tests(task, workspace, runner, "tests/public", cancellation_token)
+            cancelled = public_result.cancelled
+        if not cancelled:
+            quality = score_quality(task, workspace, changed, runner, cancellation_token)
+            cancelled = cancellation_token is not None and cancellation_token.cancelled
+        if cancelled:
+            dimensions = _cancelled_dimensions(task)
+            all_counts = TestCounts(passed=0, failed=expected_total, total=expected_total)
+            status: Literal["completed", "timed_out", "cancelled", "error"] = "cancelled"
+        else:
+            assert public_result is not None
+            assert quality is not None
+            public_counts = parse_test_counts(public_result)
+            dimensions = {
+                "correctness": score_correctness(task, all_counts),
+                "regression_safety": score_regression(task, public_counts),
+                "code_quality": quality,
+                "scope_control": scope,
+            }
+            status = "timed_out" if all_result.timed_out else "completed"
+            if all_result.return_code is None and not all_result.timed_out:
+                status = "error"
         score = round(sum(item.score for item in dimensions.values()), 2)
         sensitive_roots = [workspace.resolve(), task_directory.resolve(), submission.resolve()]
         evidence = ExecutionEvidence(
             argv=sanitize_command(all_result.command, sensitive_roots),
             exit_code=all_result.return_code,
             timed_out=all_result.timed_out,
+            cancelled=cancelled,
             duration_seconds=round(all_result.duration_seconds, 3),
             working_directory="<WORKSPACE>",
             stdout_file="stdout.txt",
