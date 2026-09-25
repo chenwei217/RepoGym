@@ -26,6 +26,7 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 | `repogym cache list [--cache-dir PATH]` | cache manifests and artifacts | no | no |
 | `repogym cache verify [--cache-dir PATH]` | cache manifests and artifacts | no | no |
 | `repogym cache clear [--cache-dir PATH]` | cache entries | no | removes a snapshot of entries |
+| `repogym plugins` | installed entry-point metadata and plugin imports | no | no |
 | `repogym version` | package metadata | no | no |
 
 `doctor` separates PASS, WARN, and FAIL checks and never starts the configured test command.
@@ -53,3 +54,8 @@ accept `30` while continuing to reject `10`, `20`, `40`, and `70`.
 identify their source run; cancelled, timed-out, and launch-error results are never cached. Cache
 integrity failures return environment code `40`. `cache verify` reports corruption without
 modifying it; normal grading removes a corrupt matching entry and safely recomputes it.
+
+`plugins` discovers only the `repogym.plugins` entry-point group. It reports loaded, failed,
+incompatible, and conflicting registrations in deterministic order and exits successfully even
+when individual plugins fail to import. Built-in commands do not discover plugins implicitly.
+See [Plugin development](plugins.md) for the versioned contract and trust boundary.

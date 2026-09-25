@@ -17,3 +17,4 @@ feature documentation.
 - [0006: Deterministic machine report formats](0006-machine-report-formats.md)
 - [0007: Stable automation exit codes](0007-stable-automation-exit-codes.md)
 - [0008: Atomic incremental execution cache](0008-atomic-execution-cache.md)
+- [0009: Versioned plugin contracts](0009-versioned-plugin-contracts.md)

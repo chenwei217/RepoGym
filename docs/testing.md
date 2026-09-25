@@ -38,6 +38,10 @@ run IDs, stale-lock recovery, thread contention, one-execution concurrent gradin
 recomputation, exclusion of incomplete runs, CLI inspection/verification/clearing, and one-off
 cache disabling.
 
+Plugin tests cover deterministic entry-point ordering, API compatibility, duplicate-name policy,
+malformed and raising imports, loader schema validation, executor DTO conversion and cancellation,
+report redaction, CLI diagnostics, and isolation from built-in commands.
+
 Executor coverage includes independent stdout/stderr limits, encoded Unicode byte boundaries,
 large single writes, timeout capture, and persisted truncation evidence. Assertions use encoded
 byte counts rather than platform newline assumptions.

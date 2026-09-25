@@ -23,6 +23,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - Cooperative cancellation with the same cross-platform process-tree cleanup as timeouts
 - Versioned command, test, environment, and artifact evidence in deterministic order
 - Atomic content-addressed execution caching with corruption recovery and per-key locking
+- Versioned, failure-isolated plugin contracts for loaders, executors, and reporters
 - Integrity-checked, versioned ZIP export and atomic import of portable tasks
 - Two original, runnable Python tasks
 
@@ -46,6 +47,7 @@ repogym doctor tasks/python-cache-ttl
 repogym verify tasks/python-cache-ttl
 repogym grade tasks/python-cache-ttl --submission examples/submissions/cache-ttl-fixed
 repogym cache verify
+repogym plugins
 repogym report .repogym/runs/<run-id> --format html --output report.html
 repogym compare .repogym/runs/<run-a> .repogym/runs/<run-b>
 repogym bundle export tasks/python-cache-ttl python-cache-ttl.zip
@@ -75,6 +77,7 @@ pytest --cov=repogym --cov-report=term-missing
 | `repogym bundle export TASK OUTPUT` | Export a versioned, integrity-checked task package |
 | `repogym bundle import BUNDLE --destination DIR` | Verify and atomically import a task package |
 | `repogym cache list\|verify\|clear` | Inspect or maintain execution cache entries |
+| `repogym plugins` | Inspect compatible plugins and isolated discovery failures |
 | `repogym version` | Print the installed version |
 
 Pass `--debug` before a command to show tracebacks for expected domain errors.
@@ -299,7 +302,8 @@ older runs that predate this file.
 
 Detailed workflows: [CLI reference](docs/cli.md),
 [reproducibility](docs/reproducibility.md), [run comparison](docs/run-comparison.md),
-[task bundles](docs/task-bundles.md), and [project milestones](docs/milestones.md).
+[task bundles](docs/task-bundles.md), [plugin development](docs/plugins.md), and
+[project milestones](docs/milestones.md).
 
 ## Roadmap
 
@@ -307,7 +311,7 @@ The following capabilities are planned and are not present in the MVP:
 
 - Docker/OCI executor with resource and network policies
 - GitHub issue importer
-- coding-agent adapters and batch evaluation
+- coding-agent adapters and deterministic batch evaluation
 - richer language-specific test result adapters
 
 ## Contributing

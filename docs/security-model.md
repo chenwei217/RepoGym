@@ -38,6 +38,8 @@ secrets, restricted networking, and a dedicated unprivileged identity.
   members, and integrity mismatches before atomically publishing a validated task;
 - execution cache entries contain only already-sanitized run artifacts plus hashes, reject links
   and membership/hash mismatches, and are published by same-filesystem atomic rename;
+- plugins are never selected implicitly; discovery failures and duplicate names are isolated,
+  and report adapter input/output is redacted at the boundary.
 
 The `doctor` command deliberately prints the resolved test executable path so operators can
 confirm which interpreter it checked. Persisted run artifacts still redact that absolute path.
@@ -53,3 +55,9 @@ Cache locking prevents duplicate same-key execution but is not a sandbox or a di
 The key hashes interpreter and executor identity without persisting submission content or
 environment variables. Anyone able to modify the cache directory can cause eviction or denial of
 reuse; integrity validation prevents such changes from being silently trusted.
+
+Plugins are also outside the data-only trust boundary. Python entry-point discovery imports and
+executes package initialization in the RepoGym process, while task loader, executor, and reporter
+methods run with the invoking user's full privileges. Protocol validation and report redaction
+limit accidental incompatibility and disclosure; they do not contain malicious plugin code.
+Install and invoke only reviewed plugins.

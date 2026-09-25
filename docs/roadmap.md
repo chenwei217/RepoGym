@@ -14,6 +14,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   internal failures;
 - content-addressed execution caching with per-key locks, atomic publication, corruption recovery,
   explicit invalidation inputs, and CLI maintenance;
+- versioned task-loader, executor, and reporter plugin contracts with isolated deterministic
+  discovery and stable adapters;
 - deterministic comparison of persisted runs; and
 - Windows and Ubuntu CI on Python 3.11 and 3.12, with an 85% branch-coverage floor.
 
@@ -21,7 +23,7 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 | Priority | Need | Acceptance criteria | Likely modules |
 | --- | --- | --- | --- |
-| P2 | Stable plugin contracts | Versioned loader, executor, and reporter protocols isolate load failures and have conflict tests plus a minimal example. | `plugins`, `executors`, `reports` |
+| P1 | Deterministic batch evaluation | Mixed task outcomes continue independently, reuse cache/evidence/reporting, sort results deterministically, and emit terminal, JSON, JUnit, and SARIF summaries with a stable aggregate exit code. | `batch`, `cli`, `reports` |
 
 ## Completed roadmap items
 
@@ -42,16 +44,19 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 - Portable task package format version 1 exports the complete fingerprint input surface with
   hashes and a non-secret environment summary. Import validates archive safety, exact membership,
   integrity, task structure, and fingerprint before atomic publication.
+- Plugin API version 1 discovers loader, executor, and reporter registrations deterministically;
+  incompatible, conflicting, malformed, and raising plugins remain isolated diagnostics.
 
 ## Test gaps
 
 - Nested-child timeout coverage is intentionally platform-constrained; Windows link tests skip
   when the runner lacks link-creation privileges.
-- No plugin contract tests exist yet because that capability does not exist.
+- Plugin contracts have unit and CLI integration coverage; independently packaged fixture wheels
+  are not yet built and installed in CI.
 - Core tests need no network after dependencies are installed. A fresh editable installation does
   require package retrieval unless a local wheelhouse is supplied.
 
 ## Delivery order
 
-Versioned plugin contracts are the next priority now that task, execution, evidence, report, and
-cache boundaries are explicit.
+Deterministic batch evaluation is the next priority and can now reuse task, execution, evidence,
+report, cache, and plugin boundaries.

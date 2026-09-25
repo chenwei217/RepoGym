@@ -25,11 +25,22 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
     SARIF 2.1.0.
 12. `comparison` computes stable A-to-B deltas without re-executing either run.
 13. `bundles` exports the fingerprint input surface and verifies it before atomic import.
+14. `plugins` discovers versioned third-party registrations and adapts their stable boundary DTOs
+    to task, executor, and report internals without implicit activation.
 
 The public Python surface is intentionally small: `load_task`, `validate_task`, `verify_task`,
-`grade_submission`, report generation, and comparison are the supported orchestration entry
-points. The Typer CLI is a thin adapter over those services. Executor implementations conform to
-the `Executor` protocol; today only `LocalExecutor` is shipped.
+`grade_submission`, report generation, comparison, and the explicit plugin registry/adapters are
+the supported orchestration entry points. The Typer CLI is a thin adapter over those services.
+Executor implementations conform to the `Executor` protocol; today only `LocalExecutor` is
+shipped in core.
+
+Plugin API version 1 uses one `repogym.plugins` entry-point group. A registration may provide a
+task loader, executor backend, reporter, or any combination. Plugin-facing DTOs carry standard
+types instead of internal persistence models. Loader output re-enters schema migration and strict
+validation; executor output is converted at an adapter; reporter input and output cross the
+shared redaction boundary. Discovery is deterministic and accumulates failures, incompatibilities,
+and duplicate-name conflicts instead of raising. Core commands never discover or activate
+plugins implicitly.
 
 The CLI translates domain outcomes into a versioned automation contract: invalid input, execution
 failure, a completed score below 100, environment/I/O failure, and an unexpected internal error

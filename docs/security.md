@@ -10,6 +10,10 @@ cleans the recorded process tree after a timeout, and redacts local absolute pat
 results and report formats. Generic `python` task commands resolve to the active interpreter so
 diagnostics and execution do not diverge through `PATH` precedence.
 
+Plugins are trusted in-process code. Discovery imports entry points, and plugin implementations
+have the same privileges as RepoGym. Built-in commands do not discover them implicitly; review a
+package before installation and use `repogym plugins` to inspect compatibility diagnostics.
+
 Portable task bundle import treats ZIP metadata and contents as untrusted. It rejects absolute or
 traversing paths, backslash ambiguity, symbolic links, duplicate and case-conflicting names,
 undeclared members, oversized content, and hash mismatches. Extraction occurs in a temporary

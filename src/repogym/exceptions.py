@@ -39,3 +39,7 @@ class BundleError(RepoGymError):
 
 class CacheError(RepoGymError):
     """Raised when an execution cache cannot be accessed safely."""
+
+
+class PluginError(RepoGymError):
+    """Raised when an explicitly selected plugin violates its contract."""

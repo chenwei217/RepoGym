@@ -23,6 +23,7 @@ from repogym.exceptions import CacheError, ExecutionError, RepoGymError
 from repogym.exit_codes import ExitCode
 from repogym.grader import grade_submission
 from repogym.loader import load_task
+from repogym.plugins import discover_plugins
 from repogym.reports import generate_report, load_run, render_terminal
 from repogym.security import redact_sensitive_text
 from repogym.validator import validate_task
@@ -311,6 +312,28 @@ def clear_cache(
 def version() -> None:
     """Show the installed RepoGym version."""
     console.print(__version__)
+
+
+@app.command()
+def plugins() -> None:
+    """List compatible extensions and isolated discovery failures."""
+    registry = discover_plugins()
+    table = Table("Entry point", "Status", "Details")
+    styles = {
+        "loaded": "green",
+        "failed": "red",
+        "incompatible": "yellow",
+        "conflict": "yellow",
+    }
+    for diagnostic in registry.diagnostics:
+        table.add_row(
+            escape(diagnostic.entry_point),
+            f"[{styles[diagnostic.status]}]{diagnostic.status}[/]",
+            escape(diagnostic.message),
+        )
+    console.print(table)
+    rejected = sum(item.status != "loaded" for item in registry.diagnostics)
+    console.print(f"{len(registry.plugins)} plugin(s) loaded; {rejected} issue(s) isolated")
 
 
 if __name__ == "__main__":
