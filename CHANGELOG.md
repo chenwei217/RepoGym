@@ -15,6 +15,7 @@ Changelog, and versions follow Semantic Versioning.
 - Stable CLI exit codes for invalid input, execution, score, environment, and internal failures
 - Atomic content-addressed execution cache with locking, integrity recovery, and CLI maintenance
 - Versioned task-loader, executor, and reporter plugin contracts with isolated discovery
+- Deterministic batch evaluation with cache reuse, failure isolation, replay, and four summaries
 - Deterministic SHA-256 task fingerprints persisted with run metadata
 - `repogym doctor` environment diagnostics
 - Terminal and JSON comparison of persisted grading runs

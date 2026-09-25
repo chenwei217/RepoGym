@@ -16,6 +16,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   explicit invalidation inputs, and CLI maintenance;
 - versioned task-loader, executor, and reporter plugin contracts with isolated deterministic
   discovery and stable adapters;
+- deterministic batch evaluation with failure continuation, cache reuse, replayable artifacts,
+  four summary formats, and stable aggregate exit codes;
 - deterministic comparison of persisted runs; and
 - Windows and Ubuntu CI on Python 3.11 and 3.12, with an 85% branch-coverage floor.
 
@@ -23,7 +25,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 | Priority | Need | Acceptance criteria | Likely modules |
 | --- | --- | --- | --- |
-| P1 | Deterministic batch evaluation | Mixed task outcomes continue independently, reuse cache/evidence/reporting, sort results deterministically, and emit terminal, JSON, JUnit, and SARIF summaries with a stable aggregate exit code. | `batch`, `cli`, `reports` |
+| P1 | Sandboxed execution backend | A separately configured backend enforces filesystem, network, CPU, memory, and process limits without weakening the local executor contract. | `executors`, `plugins`, deployment docs |
+| P2 | Per-test evidence | Persist stable test-case identities and outcomes so JUnit no longer needs aggregate or job-level adapters. | `testing`, `evidence`, `reports` |
 
 ## Completed roadmap items
 
@@ -46,6 +49,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   integrity, task structure, and fingerprint before atomic publication.
 - Plugin API version 1 discovers loader, executor, and reporter registrations deterministically;
   incompatible, conflicting, malformed, and raising plugins remain isolated diagnostics.
+- Batch schema version 1 sorts jobs independently of manifest order, continues after job failures,
+  reuses cache and run evidence, and replays terminal, JSON, JUnit, and SARIF summaries.
 
 ## Test gaps
 
@@ -53,10 +58,12 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   when the runner lacks link-creation privileges.
 - Plugin contracts have unit and CLI integration coverage; independently packaged fixture wheels
   are not yet built and installed in CI.
+- Batch execution is sequential by design; controlled parallel scheduling has not been specified.
+- Persisted grading currently contains aggregate test counts rather than per-test identities.
 - Core tests need no network after dependencies are installed. A fresh editable installation does
   require package retrieval unless a local wheelhouse is supplied.
 
 ## Delivery order
 
-Deterministic batch evaluation is the next priority and can now reuse task, execution, evidence,
-report, cache, and plugin boundaries.
+A separately configured sandboxed backend is the next security priority. Per-test evidence is the
+next reporting priority now that single and batch report contracts are stable.

@@ -43,3 +43,7 @@ class CacheError(RepoGymError):
 
 class PluginError(RepoGymError):
     """Raised when an explicitly selected plugin violates its contract."""
+
+
+class BatchError(RepoGymError):
+    """Raised when a batch manifest or persisted batch result is invalid."""

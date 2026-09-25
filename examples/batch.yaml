@@ -1,0 +1,8 @@
+schema_version: 1
+jobs:
+  - id: cache-ttl-fixed
+    task: ../tasks/python-cache-ttl
+    submission: submissions/cache-ttl-fixed
+  - id: config-merge-fixed
+    task: ../tasks/python-config-merge
+    submission: submissions/config-merge-fixed

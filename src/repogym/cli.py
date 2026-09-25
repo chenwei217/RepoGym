@@ -15,11 +15,12 @@ from typer._click.exceptions import ClickException
 from typer.core import TyperGroup
 
 from repogym import __version__
+from repogym.batch import generate_batch_report, load_batch, run_batch
 from repogym.bundles import export_task_bundle, import_task_bundle
 from repogym.cache import ExecutionCache
 from repogym.comparison import generate_comparison
 from repogym.doctor import diagnose_task
-from repogym.exceptions import CacheError, ExecutionError, RepoGymError
+from repogym.exceptions import BatchError, CacheError, ExecutionError, RepoGymError
 from repogym.exit_codes import ExitCode
 from repogym.grader import grade_submission
 from repogym.loader import load_task
@@ -57,8 +58,10 @@ app = typer.Typer(
 )
 bundle_app = typer.Typer(help="Export and import verified portable task bundles.")
 cache_app = typer.Typer(help="Inspect and maintain the incremental execution cache.")
+batch_app = typer.Typer(help="Run and replay deterministic multi-task evaluations.")
 app.add_typer(bundle_app, name="bundle")
 app.add_typer(cache_app, name="cache")
+app.add_typer(batch_app, name="batch")
 console = Console()
 error_console = Console(stderr=True)
 _debug = False
@@ -306,6 +309,77 @@ def clear_cache(
     except (CacheError, OSError) as exc:
         _fail(exc, ExitCode.ENVIRONMENT_ERROR)
     console.print(f"Removed {removed} cache entr{'y' if removed == 1 else 'ies'}")
+
+
+def _emit_batch_report(
+    batch_directory: Path,
+    format_name: Literal["terminal", "json", "junit", "sarif"],
+    output: Path | None,
+) -> None:
+    rendered = generate_batch_report(batch_directory, format_name, output, console)
+    if rendered is not None and output is None:
+        console.print(rendered, markup=False)
+    elif output is not None:
+        console.print(f"Batch report written to {escape(redact_sensitive_text(str(output)))}")
+
+
+@batch_app.command("run")
+def run_batch_command(
+    manifest: Annotated[Path, typer.Argument(help="Versioned YAML batch manifest.")],
+    format_name: Annotated[
+        Literal["terminal", "json", "junit", "sarif"],
+        typer.Option("--format", help="Summary format."),
+    ] = "terminal",
+    output: Annotated[Path | None, typer.Option("--output", help="Output report file.")] = None,
+    no_cache: Annotated[bool, typer.Option("--no-cache", help="Disable cache reuse.")] = False,
+    cache_dir: Annotated[
+        Path, typer.Option("--cache-dir", help="Execution cache directory.")
+    ] = Path(".repogym/cache"),
+    runs_dir: Annotated[
+        Path, typer.Option("--runs-dir", help="Individual run artifact directory.")
+    ] = Path(".repogym/runs"),
+    batches_dir: Annotated[
+        Path, typer.Option("--batches-dir", help="Batch artifact directory.")
+    ] = Path(".repogym/batches"),
+) -> None:
+    """Grade every manifest job, continuing after individual failures."""
+    try:
+        batch_directory = run_batch(
+            manifest,
+            output_root=batches_dir,
+            runs_root=runs_dir,
+            cache_root=None if no_cache else cache_dir,
+        )
+        batch = load_batch(batch_directory)
+        _emit_batch_report(batch_directory, format_name, output)
+    except BatchError as exc:
+        _fail(exc, ExitCode.TASK_INVALID)
+    except RepoGymError as exc:
+        _fail(exc, ExitCode.ENVIRONMENT_ERROR)
+    if format_name == "terminal" or output is not None:
+        artifact = redact_sensitive_text(str(batch_directory), [Path.cwd()])
+        console.print(f"Batch artifacts: [bold]{escape(artifact)}[/bold]")
+    if batch.exit_code != ExitCode.SUCCESS:
+        raise typer.Exit(int(batch.exit_code))
+
+
+@batch_app.command("report")
+def report_batch_command(
+    batch_run: Annotated[Path, typer.Argument(help="Batch directory or batch.json path.")],
+    format_name: Annotated[
+        Literal["terminal", "json", "junit", "sarif"],
+        typer.Option("--format", help="Summary format."),
+    ] = "terminal",
+    output: Annotated[Path | None, typer.Option("--output", help="Output report file.")] = None,
+) -> None:
+    """Replay a persisted batch result without executing task code."""
+    try:
+        batch = load_batch(batch_run)
+        _emit_batch_report(batch_run, format_name, output)
+    except RepoGymError as exc:
+        _fail(exc, ExitCode.ENVIRONMENT_ERROR)
+    if batch.exit_code != ExitCode.SUCCESS:
+        raise typer.Exit(int(batch.exit_code))
 
 
 @app.command()

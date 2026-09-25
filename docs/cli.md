@@ -27,6 +27,8 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 | `repogym cache verify [--cache-dir PATH]` | cache manifests and artifacts | no | no |
 | `repogym cache clear [--cache-dir PATH]` | cache entries | no | removes a snapshot of entries |
 | `repogym plugins` | installed entry-point metadata and plugin imports | no | no |
+| `repogym batch run MANIFEST [--format FORMAT]` | manifest, tasks, submissions, cache | candidate and tests on cache miss | individual runs, cache, and `batch.json` |
+| `repogym batch report BATCH_RUN [--format FORMAT]` | persisted `batch.json` | no | optional output file |
 | `repogym version` | package metadata | no | no |
 
 `doctor` separates PASS, WARN, and FAIL checks and never starts the configured test command.
@@ -59,3 +61,9 @@ modifying it; normal grading removes a corrupt matching entry and safely recompu
 incompatible, and conflicting registrations in deterministic order and exits successfully even
 when individual plugins fail to import. Built-in commands do not discover plugins implicitly.
 See [Plugin development](plugins.md) for the versioned contract and trust boundary.
+
+`batch run` resolves paths relative to its versioned manifest, sorts unique job IDs, and continues
+after individual failures. `batch report` replays the saved result without executing code. Both
+support terminal, JSON, JUnit, and SARIF and return the persisted aggregate outcome after writing
+the report. See [Batch evaluation](batch-evaluation.md) for schema, ordering, cache, and exit-code
+semantics.

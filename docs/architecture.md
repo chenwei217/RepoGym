@@ -27,6 +27,8 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
 13. `bundles` exports the fingerprint input surface and verifies it before atomic import.
 14. `plugins` discovers versioned third-party registrations and adapts their stable boundary DTOs
     to task, executor, and report internals without implicit activation.
+15. `batch` orders manifest jobs, reuses grading and cache services, isolates per-job outcomes,
+    atomically persists their snapshots, and replays four aggregate report formats.
 
 The public Python surface is intentionally small: `load_task`, `validate_task`, `verify_task`,
 `grade_submission`, report generation, comparison, and the explicit plugin registry/adapters are
@@ -41,6 +43,14 @@ validation; executor output is converted at an adapter; reporter input and outpu
 shared redaction boundary. Discovery is deterministic and accumulates failures, incompatibilities,
 and duplicate-name conflicts instead of raising. Core commands never discover or activate
 plugins implicitly.
+
+Batch schema version 1 separates orchestration from individual grading. Paths resolve relative to
+the manifest, but the persisted model stores job IDs and sanitized result snapshots rather than
+source paths. Lexical job ordering makes manifest order irrelevant and gives duplicate
+task/submission pairs deterministic cache ownership. Each job is attempted sequentially and maps
+to the existing exit-code contract; a fixed severity table produces the aggregate code. Report
+replay reads only `batch.json`. JUnit models each job as one testcase with underlying counts in
+properties, while SARIF merges violations and explicit non-success outcomes.
 
 The CLI translates domain outcomes into a versioned automation contract: invalid input, execution
 failure, a completed score below 100, environment/I/O failure, and an unexpected internal error

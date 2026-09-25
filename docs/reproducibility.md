@@ -45,3 +45,8 @@ candidate file manifest, resolved command, executor backend and output limits, P
 implementation, OS and machine identity, and RepoGym version. The canonical JSON input is hashed
 with SHA-256; only the digest is persisted in the cache manifest. A hit replays sanitized evidence
 into a new run directory and records the original source run ID rather than claiming re-execution.
+
+Batch manifest order is not an execution input. RepoGym sorts unique job IDs before grading and
+persists them in that order; duplicate task/submission pairs are allowed, with the first sorted job
+populating the cache and later matches replaying it under distinct run IDs. `batch report` consumes
+only the saved `batch.json`, so rendering never changes task state or reruns a candidate.

@@ -40,6 +40,8 @@ secrets, restricted networking, and a dedicated unprivileged identity.
   and membership/hash mismatches, and are published by same-filesystem atomic rename;
 - plugins are never selected implicitly; discovery failures and duplicate names are isolated,
   and report adapter input/output is redacted at the boundary.
+- batch manifests do not persist configured task/submission paths; job exceptions, embedded run
+  snapshots, and all replay formats pass through the shared absolute-path redaction policy.
 
 The `doctor` command deliberately prints the resolved test executable path so operators can
 confirm which interpreter it checked. Persisted run artifacts still redact that absolute path.
@@ -61,3 +63,8 @@ executes package initialization in the RepoGym process, while task loader, execu
 methods run with the invoking user's full privileges. Protocol validation and report redaction
 limit accidental incompatibility and disclosure; they do not contain malicious plugin code.
 Install and invoke only reviewed plugins.
+
+Batch execution does not reduce the trust required for tasks or submissions. A manifest may point
+to any local path the process can read, and every cache miss runs candidate code with the selected
+executor's privileges. Sequential execution limits implicit scheduling variability but is not a
+resource or authorization boundary.

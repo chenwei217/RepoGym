@@ -14,6 +14,10 @@ Plugins are trusted in-process code. Discovery imports entry points, and plugin 
 have the same privileges as RepoGym. Built-in commands do not discover them implicitly; review a
 package before installation and use `repogym plugins` to inspect compatibility diagnostics.
 
+Batch manifests can reference any path accessible to the invoking user and do not add isolation.
+Resolved task/submission paths are not persisted; per-job errors and all replay formats reuse the
+absolute-path redaction boundary.
+
 Portable task bundle import treats ZIP metadata and contents as untrusted. It rejects absolute or
 traversing paths, backslash ambiguity, symbolic links, duplicate and case-conflicting names,
 undeclared members, oversized content, and hash mismatches. Extraction occurs in a temporary

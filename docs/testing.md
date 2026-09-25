@@ -42,6 +42,11 @@ Plugin tests cover deterministic entry-point ordering, API compatibility, duplic
 malformed and raising imports, loader schema validation, executor DTO conversion and cancellation,
 report redaction, CLI diagnostics, and isolation from built-in commands.
 
+Batch tests cover manifest versions and duplicate IDs, relative paths, order-independent sorting,
+mixed-outcome continuation, exit severity, duplicate-task cache hits, 100-point grading, atomic
+persistence, four deterministic/redacted report formats, output files, and replay without task
+execution.
+
 Executor coverage includes independent stdout/stderr limits, encoded Unicode byte boundaries,
 large single writes, timeout capture, and persisted truncation evidence. Assertions use encoded
 byte counts rather than platform newline assumptions.
