@@ -30,10 +30,7 @@ jobs:
           repogym doctor tasks/python-cache-ttl
           repogym doctor tasks/python-config-merge
       - name: Comparison smoke test
-        run: |
-          repogym grade tasks/python-cache-ttl --submission examples/submissions/cache-ttl-broken
-          repogym grade tasks/python-cache-ttl --submission examples/submissions/cache-ttl-fixed
-          python -c "import subprocess; from pathlib import Path; runs=sorted(Path('.repogym/runs').iterdir()); subprocess.run(['repogym','compare',str(runs[0]),str(runs[1])],check=True); subprocess.run(['repogym','compare',str(runs[0]),str(runs[1]),'--format','json','--output','.repogym/comparison.json'],check=True)"
+        run: python scripts/ci_comparison_smoke.py
       - uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.os }}-py${{ matrix.python-version }}
