@@ -1,5 +1,14 @@
 # Reproducibility
 
+## Structured run evidence
+
+New grade runs persist `evidence.json` with schema version 1. Command, test, environment, and
+artifact records share one contract and deterministic semantic ordering. Artifact records contain
+the SHA-256 and UTF-8 byte length of the sanitized persisted content, so they can be checked
+without revealing the original workspace path. Observation time is informative run metadata and
+is not used as an identity or comparison key. Older runs are upgraded in memory when evidence is
+loaded; their files are not rewritten.
+
 ## Current guarantees
 
 RepoGym fingerprints the complete task input surface, validates the bundled reference solution,

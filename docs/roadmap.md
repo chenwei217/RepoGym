@@ -29,6 +29,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   recording original byte counts and truncation evidence.
 - A thread-safe cancellation token stops launches or active process trees, records a distinct
   cancelled result, and prevents remaining grading commands from starting.
+- Evidence schema v1 unifies command, test, non-secret environment, and artifact records with
+  stable ordering and an in-memory adapter for older runs.
 - Portable task package format version 1 exports the complete fingerprint input surface with
   hashes and a non-secret environment summary. Import validates archive safety, exact membership,
   integrity, task structure, and fingerprint before atomic publication.

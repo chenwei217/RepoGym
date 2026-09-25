@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
+from repogym.evidence import build_evidence
 from repogym.exceptions import SecurityError, ValidationError
 from repogym.executors.base import CancellationToken, Executor
 from repogym.executors.local import LocalExecutor
@@ -65,6 +66,7 @@ def grade_submission(
     run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
     run_dir = output_root.resolve() / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
+    created_at = datetime.now(UTC)
 
     with tempfile.TemporaryDirectory(prefix="repogym-grade-") as temporary:
         workspace = Path(temporary) / "workspace"
@@ -141,10 +143,12 @@ def grade_submission(
         safe_stderr = redact_known_paths(all_result.stderr, sensitive_roots)
         (run_dir / "stdout.txt").write_text(safe_stdout, encoding="utf-8")
         (run_dir / "stderr.txt").write_text(safe_stderr, encoding="utf-8")
+        evidence_document = build_evidence(result, created_at, safe_stdout, safe_stderr)
+        _write_json(run_dir / "evidence.json", evidence_document.model_dump(mode="json"))
         _write_json(run_dir / "changed_files.json", changed)
         metadata = {
             "schema_version": 1,
-            "created_at": datetime.now(UTC).isoformat(),
+            "created_at": created_at.isoformat(),
             "task_fingerprint": fingerprint,
             "command": sanitize_command(all_result.command, sensitive_roots),
             "return_code": all_result.return_code,

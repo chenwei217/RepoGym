@@ -16,8 +16,8 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
    timeout or cooperative cancellation.
 7. `verifier` compares the starter failure count with metadata, applies a strict unified diff,
    and proves the reference result.
-8. `grader` overlays a candidate, runs all and public tests, then persists artifacts and
-   structured execution evidence.
+8. `grader` overlays a candidate, runs all and public tests, then persists artifacts and a
+   versioned, deterministically ordered evidence document.
 9. `scoring` computes independent deterministic dimensions.
 10. `reports` rehydrates `result.json` and renders terminal, JSON, or escaped HTML.
 11. `comparison` computes stable A-to-B deltas without re-executing either run.
@@ -56,6 +56,13 @@ summary. `metadata.json` contains the same structured evidence with creation tim
 version. Old results using `execution.command` remain readable. Neither file stores the original
 task or submission absolute path. Loading an existing run applies redaction again before
 terminal, JSON, HTML, or comparison rendering.
+
+`evidence.json` schema v1 unifies command, parsed-test, runtime-environment, and output-artifact
+records. Each record carries its task, source, observation time, status, summary, and typed
+details. Ordering uses kind, source, and summary rather than insertion order. Runtime evidence is
+restricted to Python implementation/version and OS family; commands and artifacts are sanitized
+before evidence is built. Runs without the file are adapted in memory from their existing result,
+metadata, and output artifacts.
 
 The fingerprint incorporates length-prefixed normalized relative paths and file bytes in lexical
 path order. Required inputs are `task.yaml`, prompt/description, `starter/`, public tests, private

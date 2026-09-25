@@ -10,6 +10,7 @@ Changelog, and versions follow Semantic Versioning.
 - Versioned TaskSpec schemas with deterministic legacy migration and future-version rejection
 - Memory-bounded stdout and stderr capture with byte counts and truncation evidence
 - Cooperative execution cancellation with process-tree cleanup and persisted cancellation status
+- Versioned, deterministic command/test/environment/artifact evidence documents
 - Deterministic SHA-256 task fingerprints persisted with run metadata
 - `repogym doctor` environment diagnostics
 - Terminal and JSON comparison of persisted grading runs

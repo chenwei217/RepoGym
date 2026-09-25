@@ -21,6 +21,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - Preflight submission auditing for scope, links, reparse points, size, and sensitive filenames
 - Bounded process output, process-tree timeout cleanup, and unified path redaction
 - Cooperative cancellation with the same cross-platform process-tree cleanup as timeouts
+- Versioned command, test, environment, and artifact evidence in deterministic order
 - Integrity-checked, versioned ZIP export and atomic import of portable tasks
 - Two original, runnable Python tasks
 
@@ -239,6 +240,12 @@ between the beginning and end so diagnostics and final test summaries remain use
 callers can set independent positive limits. The same redaction policy is applied to captured
 output, JSON, terminal, HTML, and comparisons; environment variables and tokens are never
 recorded automatically.
+
+Each new run also writes `evidence.json` using evidence schema version 1. Its records cover the
+executed command, parsed test statistics, non-secret runtime identity, and sanitized output
+artifacts. Every record has a source, observation time, status, summary, and task association;
+records are sorted by stable semantic keys. The loader synthesizes equivalent v1 evidence for
+older runs that predate this file.
 
 Detailed workflows: [CLI reference](docs/cli.md),
 [reproducibility](docs/reproducibility.md), [run comparison](docs/run-comparison.md),

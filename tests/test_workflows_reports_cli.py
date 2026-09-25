@@ -117,6 +117,7 @@ def test_grades_correct_submission_and_writes_artifacts(tmp_path: Path) -> None:
     assert str(tmp_path) not in serialized_metadata
     assert set(path.name for path in run_dir.iterdir()) == {
         "changed_files.json",
+        "evidence.json",
         "metadata.json",
         "result.json",
         "stderr.txt",
