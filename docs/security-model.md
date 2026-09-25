@@ -31,8 +31,9 @@ secrets, restricted networking, and a dedicated unprivileged identity.
   without name-based kills;
 - process output is memory-bounded without stopping pipe drainage, including during timeout;
 - temporary workspaces are managed by the standard library and cleaned on exit;
-- Jinja autoescaping protects the HTML report from task output injection.
-- absolute paths are redacted consistently from persisted artifacts and all report formats;
+- Jinja autoescaping protects the HTML report from task output injection;
+- absolute paths are redacted consistently from persisted artifacts and all report formats,
+  including JUnit and SARIF; SARIF also re-redacts direct serializer input;
 - task bundle import rejects Zip Slip paths, links, name collisions, undeclared or oversized
   members, and integrity mismatches before atomically publishing a validated task;
 

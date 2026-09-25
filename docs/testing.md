@@ -13,7 +13,8 @@ coverage report --fail-under=85
 
 The suite is organized by responsibility: task loading and validation, command parsing and test
 execution, reproducibility, submission and patch security, diagnostics, scoring, comparisons,
-and end-to-end CLI workflows. The CI matrix runs the same checks on Ubuntu and Windows with
+machine-report format contracts, and end-to-end CLI workflows. The CI matrix runs the same
+checks on Ubuntu and Windows with
 Python 3.11 and 3.12, then verifies both bundled tasks and smoke-tests doctor and comparison.
 
 Some link-related tests are skipped on Windows runners without the privilege required to create a
@@ -23,6 +24,10 @@ the core suite and bundled-task verification require no network connection.
 
 New production behavior needs a normal-path test, an error-path test, and an integration test
 where it crosses a CLI, filesystem, subprocess, or persisted-artifact boundary.
+
+JUnit tests parse the emitted XML and assert counts, failures, derived skips, duration, escaping,
+and empty results. SARIF tests assert the 2.1.0 contract, stable rule and result ordering, relative
+locations, line numbers, empty results, deterministic serialization, and absolute-path redaction.
 
 Executor coverage includes independent stdout/stderr limits, encoded Unicode byte boundaries,
 large single writes, timeout capture, and persisted truncation evidence. Assertions use encoded

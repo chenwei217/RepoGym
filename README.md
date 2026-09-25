@@ -17,7 +17,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - Generic `python` task commands are bound to the interpreter running RepoGym
 - Deterministic correctness, regression, static-quality, and scope scores
 - Deterministic run-to-run comparison in terminal or JSON form
-- Terminal, JSON, and self-contained HTML reports
+- Terminal, JSON, self-contained HTML, JUnit XML, and SARIF reports
 - Preflight submission auditing for scope, links, reparse points, size, and sensitive filenames
 - Bounded process output, process-tree timeout cleanup, and unified path redaction
 - Cooperative cancellation with the same cross-platform process-tree cleanup as timeouts
@@ -68,7 +68,7 @@ pytest --cov=repogym --cov-report=term-missing
 | `repogym doctor TASK` | Diagnose the local execution environment |
 | `repogym verify TASK` | Prove the starter fails and the reference fix passes |
 | `repogym grade TASK --submission DIR` | Grade a candidate in a temporary workspace |
-| `repogym report RUN --format terminal\|json\|html [--output FILE]` | Re-render saved run artifacts |
+| `repogym report RUN --format terminal\|json\|html\|junit\|sarif [--output FILE]` | Re-render saved run artifacts |
 | `repogym compare RUN_A RUN_B --format terminal\|json [--output FILE]` | Compare two persisted runs |
 | `repogym bundle export TASK OUTPUT` | Export a versioned, integrity-checked task package |
 | `repogym bundle import BUNDLE --destination DIR` | Verify and atomically import a task package |
@@ -192,6 +192,15 @@ The HTML renderer emits one portable file with no CDN dependency. It contains th
 score, every scoring dimension, test statistics, violations, duration, and collapsed process
 output. Untrusted output is HTML-escaped and local absolute paths are redacted first.
 
+## Machine reports
+
+Use `--format junit` to export aggregate test outcomes for CI test viewers. The suite carries the
+recorded total, failure, derived skipped, and duration values, with deterministic synthetic case
+names because RepoGym currently persists aggregate rather than per-test results. Use `--format
+sarif` to export scope violations for code-scanning tools; known relative paths and line suffixes
+become SARIF physical locations. Both formats are deterministic and reuse the run loader's path
+redaction. Pass `--output report.xml` or `--output report.sarif` to write a file.
+
 ## Architecture
 
 ```mermaid
@@ -201,7 +210,7 @@ flowchart TD
     C --> D[Isolated Workspace]
     D --> E[Test Execution and Evidence]
     E --> F[Deterministic Scoring]
-    F --> G[JSON / Terminal / HTML Report]
+    F --> G[Terminal / JSON / HTML / JUnit / SARIF Report]
     G --> H[Run Comparison]
 ```
 

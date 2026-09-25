@@ -11,6 +11,7 @@ Changelog, and versions follow Semantic Versioning.
 - Memory-bounded stdout and stderr capture with byte counts and truncation evidence
 - Cooperative execution cancellation with process-tree cleanup and persisted cancellation status
 - Versioned, deterministic command/test/environment/artifact evidence documents
+- Deterministic JUnit XML and SARIF 2.1.0 machine reports
 - Deterministic SHA-256 task fingerprints persisted with run metadata
 - `repogym doctor` environment diagnostics
 - Terminal and JSON comparison of persisted grading runs

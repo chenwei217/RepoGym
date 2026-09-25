@@ -19,7 +19,8 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
 8. `grader` overlays a candidate, runs all and public tests, then persists artifacts and a
    versioned, deterministically ordered evidence document.
 9. `scoring` computes independent deterministic dimensions.
-10. `reports` rehydrates `result.json` and renders terminal, JSON, or escaped HTML.
+10. `reports` rehydrates `result.json` and renders terminal, JSON, escaped HTML, JUnit XML, or
+    SARIF 2.1.0.
 11. `comparison` computes stable A-to-B deltas without re-executing either run.
 12. `bundles` exports the fingerprint input surface and verifies it before atomic import.
 
@@ -55,7 +56,13 @@ pipes, preventing pipe deadlocks and unbounded capture memory without losing the
 summary. `metadata.json` contains the same structured evidence with creation time and schema
 version. Old results using `execution.command` remain readable. Neither file stores the original
 task or submission absolute path. Loading an existing run applies redaction again before
-terminal, JSON, HTML, or comparison rendering.
+terminal, JSON, HTML, JUnit, SARIF, or comparison rendering.
+
+JUnit is an aggregate adapter: it preserves total, failed, derived skipped, and duration data
+using stable synthetic testcase names because persisted results do not yet contain per-test case
+identities. SARIF maps deterministic, sorted scope violations to versioned rule IDs and attaches
+relative artifact and line locations when present. Both serializers consume the same sanitized
+`GradeResult`; SARIF defensively redacts violation strings again when called directly.
 
 `evidence.json` schema v1 unifies command, parsed-test, runtime-environment, and output-artifact
 records. Each record carries its task, source, observation time, status, summary, and typed

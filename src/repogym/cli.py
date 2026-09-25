@@ -136,7 +136,8 @@ def grade(
 def report(
     run: Annotated[Path, typer.Argument(help="Run directory.")],
     format_name: Annotated[
-        Literal["terminal", "json", "html"], typer.Option("--format", help="Report format.")
+        Literal["terminal", "json", "html", "junit", "sarif"],
+        typer.Option("--format", help="Report format."),
     ] = "terminal",
     output: Annotated[Path | None, typer.Option("--output", help="Output file.")] = None,
 ) -> None:

@@ -9,7 +9,7 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 - a local cross-platform executor with direct argv execution, timeout process-tree cleanup, and
   an active-interpreter binding for generic Python test commands;
 - preflight submission auditing, safe copying, path redaction, scoring, persisted evidence, and
-  terminal, JSON, and HTML reports;
+  terminal, JSON, HTML, JUnit XML, and SARIF reports;
 - deterministic comparison of persisted runs; and
 - Windows and Ubuntu CI on Python 3.11 and 3.12, with an 85% branch-coverage floor.
 
@@ -17,7 +17,6 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 | Priority | Need | Acceptance criteria | Likely modules |
 | --- | --- | --- | --- |
-| P1 | Machine-oriented reports | JUnit XML and SARIF serializers have stable schemas, redact sensitive paths, and carry actionable locations when available. | `reports`, `cli`, `models` |
 | P2 | Cache and incremental execution | Cache keys include task fingerprint, resolved command, and relevant inputs; writes are atomic, corrupt entries recover, and CLI inspection/clearing is tested. | `cache`, `grader`, `cli` |
 | P2 | Stable plugin contracts | Versioned loader, executor, and reporter protocols isolate load failures and have conflict tests plus a minimal example. | `plugins`, `executors`, `reports` |
 
@@ -31,6 +30,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   cancelled result, and prevents remaining grading commands from starting.
 - Evidence schema v1 unifies command, test, non-secret environment, and artifact records with
   stable ordering and an in-memory adapter for older runs.
+- JUnit XML exposes aggregate test outcomes and SARIF 2.1.0 exposes sorted scope violations with
+  stable rules, optional relative locations, and shared path redaction.
 - Portable task package format version 1 exports the complete fingerprint input surface with
   hashes and a non-secret environment summary. Import validates archive safety, exact membership,
   integrity, task structure, and fingerprint before atomic publication.
@@ -39,13 +40,12 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 - Nested-child timeout coverage is intentionally platform-constrained; Windows link tests skip
   when the runner lacks link-creation privileges.
-- No cache-contention, cancellation, JUnit, SARIF, or plugin contract tests exist yet because
-  those capabilities do not exist.
+- No cache-contention or plugin contract tests exist yet because those capabilities do not exist.
 - Core tests need no network after dependencies are installed. A fresh editable installation does
   require package retrieval unless a local wheelhouse is supplied.
 
 ## Delivery order
 
-Machine reports are the next priority because they build on stable task, package, execution, and
-evidence contracts. Caching and plugins remain later: their contracts should be designed after
-those formats are stable.
+Caching is the next priority because stable task, execution, evidence, and report contracts now
+provide the inputs and replay behavior needed for safe reuse. Plugins follow once the cache
+boundary is explicit.

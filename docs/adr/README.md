@@ -14,3 +14,4 @@ feature documentation.
 - [0003: Bounded process output capture](0003-bounded-process-output.md)
 - [0004: Cooperative execution cancellation](0004-cooperative-execution-cancellation.md)
 - [0005: Versioned structured execution evidence](0005-versioned-execution-evidence.md)
+- [0006: Deterministic machine report formats](0006-machine-report-formats.md)
