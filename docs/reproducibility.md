@@ -39,3 +39,9 @@ inputs and symbolic links are errors rather than silently producing a partial id
 The full digest appears in `verify` and `doctor` output and in both `metadata.json` and
 `result.json` for grading runs. A comparison with unequal digests remains readable but carries a
 prominent warning; a comparison with different task IDs is rejected.
+
+Incremental execution adds a broader cache key around the task fingerprint. It also includes the
+candidate file manifest, resolved command, executor backend and output limits, Python version and
+implementation, OS and machine identity, and RepoGym version. The canonical JSON input is hashed
+with SHA-256; only the digest is persisted in the cache manifest. A hit replays sanitized evidence
+into a new run directory and records the original source run ID rather than claiming re-execution.

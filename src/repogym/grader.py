@@ -9,11 +9,19 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
+from repogym.cache import ExecutionCache, build_cache_key
 from repogym.evidence import build_evidence
 from repogym.exceptions import SecurityError, ValidationError
 from repogym.executors.base import CancellationToken, Executor
 from repogym.executors.local import LocalExecutor
-from repogym.models import DimensionResult, ExecutionEvidence, GradeResult, TaskSpec, TestCounts
+from repogym.models import (
+    CacheEvidence,
+    DimensionResult,
+    ExecutionEvidence,
+    GradeResult,
+    TaskSpec,
+    TestCounts,
+)
 from repogym.reproducibility import task_fingerprint
 from repogym.scoring import score_correctness, score_quality, score_regression, score_scope
 from repogym.security import (
@@ -45,12 +53,24 @@ def _cancelled_dimensions(task: TaskSpec) -> dict[str, DimensionResult]:
     }
 
 
+def _new_run_id() -> str:
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
+
+
+def _executor_cache_identity(executor: Executor) -> str:
+    kind = f"{type(executor).__module__}.{type(executor).__qualname__}"
+    if isinstance(executor, LocalExecutor):
+        return f"{kind}:stdout={executor.max_stdout_bytes}:stderr={executor.max_stderr_bytes}"
+    return kind
+
+
 def grade_submission(
     task_directory: Path,
     submission: Path,
     output_root: Path = Path(".repogym/runs"),
     executor: Executor | None = None,
     cancellation_token: CancellationToken | None = None,
+    cache_root: Path | None = None,
 ) -> Path:
     validation = validate_task(task_directory)
     if not validation.valid or validation.task is None:
@@ -63,7 +83,55 @@ def grade_submission(
         raise SecurityError("Submission audit failed:\n  - " + "\n  - ".join(audit.violations))
     fingerprint = task_fingerprint(task_directory, task)
     runner = executor or LocalExecutor()
-    run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
+    if cache_root is None:
+        return _grade_validated(
+            task_directory,
+            submission,
+            output_root,
+            runner,
+            cancellation_token,
+            task,
+            fingerprint,
+            _new_run_id(),
+        )
+    key = build_cache_key(task, fingerprint, submission, _executor_cache_identity(runner))
+    cache = ExecutionCache(cache_root)
+    lock_timeout = max(30, task.execution.timeout_seconds * 3 + 30)
+    with cache.lock(key, timeout_seconds=lock_timeout):
+        run_id = _new_run_id()
+        restored = cache.restore(key, output_root, run_id)
+        if restored is not None:
+            return restored
+        run_dir = _grade_validated(
+            task_directory,
+            submission,
+            output_root,
+            runner,
+            cancellation_token,
+            task,
+            fingerprint,
+            run_id,
+            key,
+        )
+        persisted = GradeResult.model_validate_json(
+            (run_dir / "result.json").read_text(encoding="utf-8")
+        )
+        if persisted.status == "completed":
+            cache.store(key, run_dir)
+        return run_dir
+
+
+def _grade_validated(
+    task_directory: Path,
+    submission: Path,
+    output_root: Path,
+    runner: Executor,
+    cancellation_token: CancellationToken | None,
+    task: TaskSpec,
+    fingerprint: str,
+    run_id: str,
+    cache_key: str | None = None,
+) -> Path:
     run_dir = output_root.resolve() / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
     created_at = datetime.now(UTC)
@@ -127,6 +195,7 @@ def grade_submission(
             stdout_truncated=all_result.stdout_truncated,
             stderr_truncated=all_result.stderr_truncated,
         )
+        cache_evidence = CacheEvidence(key=cache_key, hit=False) if cache_key is not None else None
         result = GradeResult(
             task_id=task.id,
             task_fingerprint=fingerprint,
@@ -138,6 +207,7 @@ def grade_submission(
             violations=violations,
             duration_seconds=round(all_result.duration_seconds, 3),
             execution=evidence,
+            cache=cache_evidence,
         )
         safe_stdout = redact_known_paths(all_result.stdout, sensitive_roots)
         safe_stderr = redact_known_paths(all_result.stderr, sensitive_roots)
@@ -155,6 +225,8 @@ def grade_submission(
             "timed_out": all_result.timed_out,
             "execution": evidence.model_dump(mode="json"),
         }
+        if cache_evidence is not None:
+            metadata["cache"] = cache_evidence.model_dump(mode="json")
         _write_json(run_dir / "metadata.json", redact_value(metadata, sensitive_roots))
         _write_json(
             run_dir / "result.json",

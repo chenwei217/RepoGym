@@ -35,3 +35,7 @@ class ReportError(RepoGymError):
 
 class BundleError(RepoGymError):
     """Raised when a portable task bundle cannot be created or imported."""
+
+
+class CacheError(RepoGymError):
+    """Raised when an execution cache cannot be accessed safely."""

@@ -18,11 +18,14 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 | `repogym validate TASK` | task metadata and tests | no | no |
 | `repogym doctor TASK` | task metadata and filesystem metadata | no | temporary probe only |
 | `repogym verify TASK` | complete task | starter and reference | temporary workspace only |
-| `repogym grade TASK --submission DIR` | task and audited submission | candidate and tests | `.repogym/runs/<id>/` |
+| `repogym grade TASK --submission DIR [--no-cache]` | task and audited submission | candidate and tests on cache miss | `.repogym/runs/<id>/`, `.repogym/cache/` |
 | `repogym report RUN --format terminal\|json\|html\|junit\|sarif [--output FILE]` | run artifacts | no | optional output file |
 | `repogym compare RUN_A RUN_B --format terminal\|json [--output FILE]` | two run artifacts | no | optional output file |
 | `repogym bundle export TASK OUTPUT` | validated task directory | no | new ZIP task bundle |
 | `repogym bundle import BUNDLE --destination DIR` | ZIP task bundle | no | verified task directory |
+| `repogym cache list [--cache-dir PATH]` | cache manifests and artifacts | no | no |
+| `repogym cache verify [--cache-dir PATH]` | cache manifests and artifacts | no | no |
+| `repogym cache clear [--cache-dir PATH]` | cache entries | no | removes a snapshot of entries |
 | `repogym version` | package metadata | no | no |
 
 `doctor` separates PASS, WARN, and FAIL checks and never starts the configured test command.
@@ -44,3 +47,9 @@ artifacts return `40` for terminal, JSON, JUnit, and SARIF reports, and both com
 POSIX shells read the code from `$?`; PowerShell reads `$LASTEXITCODE`. CI steps fail naturally
 for every nonzero value. If a pipeline intentionally evaluates partial solutions, explicitly
 accept `30` while continuing to reject `10`, `20`, `40`, and `70`.
+
+`grade` enables the content-addressed cache by default. `--no-cache` forces execution, while
+`--cache-dir` selects an alternate store. Hits still create a new ordinary run directory and
+identify their source run; cancelled, timed-out, and launch-error results are never cached. Cache
+integrity failures return environment code `40`. `cache verify` reports corruption without
+modifying it; normal grading removes a corrupt matching entry and safely recomputes it.

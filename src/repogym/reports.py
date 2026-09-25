@@ -43,6 +43,9 @@ def render_terminal(result: GradeResult, console: Console) -> None:
         f"Tests: {result.tests.passed} passed, {result.tests.failed} failed; "
         f"status: {result.status}; duration: {result.duration_seconds:.3f}s"
     )
+    if result.cache is not None:
+        state = "hit" if result.cache.hit else "miss"
+        console.print(f"Cache: {state} ({result.cache.key[:12]})")
     if result.violations:
         console.print("[yellow]Violations:[/yellow]")
         for violation in result.violations:

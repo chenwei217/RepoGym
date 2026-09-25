@@ -16,3 +16,4 @@ feature documentation.
 - [0005: Versioned structured execution evidence](0005-versioned-execution-evidence.md)
 - [0006: Deterministic machine report formats](0006-machine-report-formats.md)
 - [0007: Stable automation exit codes](0007-stable-automation-exit-codes.md)
+- [0008: Atomic incremental execution cache](0008-atomic-execution-cache.md)

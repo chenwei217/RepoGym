@@ -19,10 +19,12 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
 8. `grader` overlays a candidate, runs all and public tests, then persists artifacts and a
    versioned, deterministically ordered evidence document.
 9. `scoring` computes independent deterministic dimensions.
-10. `reports` rehydrates `result.json` and renders terminal, JSON, escaped HTML, JUnit XML, or
+10. `cache` keys completed grades by all task, submission, executor, runtime, and tool-version
+    inputs, serializes same-key work, and atomically publishes validated artifacts.
+11. `reports` rehydrates `result.json` and renders terminal, JSON, escaped HTML, JUnit XML, or
     SARIF 2.1.0.
-11. `comparison` computes stable A-to-B deltas without re-executing either run.
-12. `bundles` exports the fingerprint input surface and verifies it before atomic import.
+12. `comparison` computes stable A-to-B deltas without re-executing either run.
+13. `bundles` exports the fingerprint input surface and verifies it before atomic import.
 
 The public Python surface is intentionally small: `load_task`, `validate_task`, `verify_task`,
 `grade_submission`, report generation, and comparison are the supported orchestration entry
@@ -34,6 +36,14 @@ failure, a completed score below 100, environment/I/O failure, and an unexpected
 have distinct codes. A top-level group boundary catches only unwrapped filesystem and unexpected
 exceptions; command-specific domain failures retain their more precise category. Framework usage
 errors keep Typer's code 2.
+
+CLI grading enables schema-v1 caching while the Python API remains opt-in through `cache_root`.
+The key is canonical JSON over task fingerprint, candidate file hashes, resolved command, executor
+identity and output limits, Python/OS identity, and RepoGym version. A per-key exclusive lock
+spans lookup and execution. Completed misses publish a hash manifest and sanitized artifacts by
+same-filesystem atomic rename; incomplete executions never publish. Hits validate exact membership
+and hashes, then materialize a distinct run ID with cache-hit and source-run provenance. Invalid
+entries are removed under the same lock and recomputed.
 
 The configured test command is generic rather than pytest-specific, but the MVP count adapter
 parses pytest summary output. Public tests are run separately for regression scoring. Submission

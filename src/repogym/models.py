@@ -132,6 +132,12 @@ class ExecutionEvidence(BaseModel):
         return self.argv
 
 
+class CacheEvidence(BaseModel):
+    key: str = Field(pattern=r"^[0-9a-f]{64}$")
+    hit: bool
+    source_run_id: str | None = None
+
+
 class GradeResult(BaseModel):
     task_id: str
     task_fingerprint: str | None = None
@@ -143,3 +149,4 @@ class GradeResult(BaseModel):
     violations: list[str]
     duration_seconds: float
     execution: ExecutionEvidence | None = None
+    cache: CacheEvidence | None = None

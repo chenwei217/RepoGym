@@ -22,6 +22,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - Bounded process output, process-tree timeout cleanup, and unified path redaction
 - Cooperative cancellation with the same cross-platform process-tree cleanup as timeouts
 - Versioned command, test, environment, and artifact evidence in deterministic order
+- Atomic content-addressed execution caching with corruption recovery and per-key locking
 - Integrity-checked, versioned ZIP export and atomic import of portable tasks
 - Two original, runnable Python tasks
 
@@ -44,6 +45,7 @@ repogym validate tasks/python-cache-ttl
 repogym doctor tasks/python-cache-ttl
 repogym verify tasks/python-cache-ttl
 repogym grade tasks/python-cache-ttl --submission examples/submissions/cache-ttl-fixed
+repogym cache verify
 repogym report .repogym/runs/<run-id> --format html --output report.html
 repogym compare .repogym/runs/<run-a> .repogym/runs/<run-b>
 repogym bundle export tasks/python-cache-ttl python-cache-ttl.zip
@@ -67,11 +69,12 @@ pytest --cov=repogym --cov-report=term-missing
 | `repogym validate TASK` | Check metadata, paths, and required files |
 | `repogym doctor TASK` | Diagnose the local execution environment |
 | `repogym verify TASK` | Prove the starter fails and the reference fix passes |
-| `repogym grade TASK --submission DIR` | Grade a candidate in a temporary workspace |
+| `repogym grade TASK --submission DIR [--no-cache]` | Grade a candidate with incremental caching |
 | `repogym report RUN --format terminal\|json\|html\|junit\|sarif [--output FILE]` | Re-render saved run artifacts |
 | `repogym compare RUN_A RUN_B --format terminal\|json [--output FILE]` | Compare two persisted runs |
 | `repogym bundle export TASK OUTPUT` | Export a versioned, integrity-checked task package |
 | `repogym bundle import BUNDLE --destination DIR` | Verify and atomically import a task package |
+| `repogym cache list\|verify\|clear` | Inspect or maintain execution cache entries |
 | `repogym version` | Print the installed version |
 
 Pass `--debug` before a command to show tracebacks for expected domain errors.
@@ -99,6 +102,20 @@ if ($LASTEXITCODE -eq 30) { Write-Host "Valid run, score below 100" }
 
 CI runners fail a step naturally for every nonzero outcome; branch on `30` only when a below-100
 candidate is expected data rather than a failed gate.
+
+### Incremental execution cache
+
+The CLI caches completed grades under `.repogym/cache` and still materializes a distinct run under
+`.repogym/runs` for every invocation. A cache hit is shown in terminal output and recorded in
+`result.json` and `metadata.json` with the source run ID. Use `--no-cache` for a one-off fresh run,
+or `--cache-dir PATH` to select a different cache. Python callers remain uncached unless they pass
+`cache_root` to `grade_submission`.
+
+Keys cover the complete task fingerprint, submission file hashes, resolved command, executor
+identity and output limits, Python/OS identity, and RepoGym version. Only completed runs are
+published. Entries use per-key locks and atomic directory publication; a hash or membership
+mismatch is discarded and recomputed on the next grade. `repogym cache list`, `cache verify`, and
+`cache clear` inspect integrity or remove the entries present when clearing begins.
 
 ## Reproducibility and diagnostics
 

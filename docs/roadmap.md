@@ -12,6 +12,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   terminal, JSON, HTML, JUnit XML, and SARIF reports;
 - stable automation exit codes separating invalid input, execution, score, environment, and
   internal failures;
+- content-addressed execution caching with per-key locks, atomic publication, corruption recovery,
+  explicit invalidation inputs, and CLI maintenance;
 - deterministic comparison of persisted runs; and
 - Windows and Ubuntu CI on Python 3.11 and 3.12, with an 85% branch-coverage floor.
 
@@ -19,7 +21,6 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 | Priority | Need | Acceptance criteria | Likely modules |
 | --- | --- | --- | --- |
-| P2 | Cache and incremental execution | Cache keys include task fingerprint, resolved command, and relevant inputs; writes are atomic, corrupt entries recover, and CLI inspection/clearing is tested. | `cache`, `grader`, `cli` |
 | P2 | Stable plugin contracts | Versioned loader, executor, and reporter protocols isolate load failures and have conflict tests plus a minimal example. | `plugins`, `executors`, `reports` |
 
 ## Completed roadmap items
@@ -36,6 +37,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   stable rules, optional relative locations, and shared path redaction.
 - CLI exit codes provide one outcome mapping across terminal and machine-oriented commands while
   retaining Typer's standard syntax-error code.
+- Completed grades use a versioned content-addressed cache; cache hits create distinct replay runs,
+  while per-key locks, hashes, atomic rename, and re-execution recover contention and corruption.
 - Portable task package format version 1 exports the complete fingerprint input surface with
   hashes and a non-secret environment summary. Import validates archive safety, exact membership,
   integrity, task structure, and fingerprint before atomic publication.
@@ -44,12 +47,11 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 - Nested-child timeout coverage is intentionally platform-constrained; Windows link tests skip
   when the runner lacks link-creation privileges.
-- No cache-contention or plugin contract tests exist yet because those capabilities do not exist.
+- No plugin contract tests exist yet because that capability does not exist.
 - Core tests need no network after dependencies are installed. A fresh editable installation does
   require package retrieval unless a local wheelhouse is supplied.
 
 ## Delivery order
 
-Caching is the next priority because stable task, execution, evidence, and report contracts now
-provide the inputs and replay behavior needed for safe reuse. Plugins follow once the cache
-boundary is explicit.
+Versioned plugin contracts are the next priority now that task, execution, evidence, report, and
+cache boundaries are explicit.

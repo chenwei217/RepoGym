@@ -33,6 +33,11 @@ CLI contract tests assert the numeric exit-code enum, validation versus environm
 execution and score outcomes, terminal/machine-format parity, unhandled filesystem errors,
 unexpected internal errors, and preservation of the framework's usage-error code.
 
+Cache tests cover key stability and invalidation, atomic-publication cleanup, independent replay
+run IDs, stale-lock recovery, thread contention, one-execution concurrent grading, corrupted-entry
+recomputation, exclusion of incomplete runs, CLI inspection/verification/clearing, and one-off
+cache disabling.
+
 Executor coverage includes independent stdout/stderr limits, encoded Unicode byte boundaries,
 large single writes, timeout capture, and persisted truncation evidence. Assertions use encoded
 byte counts rather than platform newline assumptions.

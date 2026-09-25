@@ -16,9 +16,10 @@ from typer.core import TyperGroup
 
 from repogym import __version__
 from repogym.bundles import export_task_bundle, import_task_bundle
+from repogym.cache import ExecutionCache
 from repogym.comparison import generate_comparison
 from repogym.doctor import diagnose_task
-from repogym.exceptions import ExecutionError, RepoGymError
+from repogym.exceptions import CacheError, ExecutionError, RepoGymError
 from repogym.exit_codes import ExitCode
 from repogym.grader import grade_submission
 from repogym.loader import load_task
@@ -54,7 +55,9 @@ app = typer.Typer(
     ),
 )
 bundle_app = typer.Typer(help="Export and import verified portable task bundles.")
+cache_app = typer.Typer(help="Inspect and maintain the incremental execution cache.")
 app.add_typer(bundle_app, name="bundle")
+app.add_typer(cache_app, name="cache")
 console = Console()
 error_console = Console(stderr=True)
 _debug = False
@@ -154,11 +157,21 @@ def verify(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> Non
 def grade(
     task: Annotated[Path, typer.Argument(help="Task directory.")],
     submission: Annotated[Path, typer.Option("--submission", help="Candidate code directory.")],
+    no_cache: Annotated[bool, typer.Option("--no-cache", help="Disable cache reuse.")] = False,
+    cache_dir: Annotated[
+        Path, typer.Option("--cache-dir", help="Execution cache directory.")
+    ] = Path(".repogym/cache"),
 ) -> None:
     """Grade a candidate submission."""
     try:
-        run_dir = grade_submission(task, submission)
+        run_dir = grade_submission(
+            task,
+            submission,
+            cache_root=None if no_cache else cache_dir,
+        )
         result, _, _ = load_run(run_dir)
+    except CacheError as exc:
+        _fail(exc, ExitCode.ENVIRONMENT_ERROR)
     except RepoGymError as exc:
         _fail(exc, ExitCode.TASK_INVALID)
     render_terminal(result, console)
@@ -241,6 +254,57 @@ def import_bundle(
         _fail(exc, ExitCode.TASK_INVALID)
     task_text = redact_sensitive_text(str(task_directory), [Path.cwd()])
     console.print(f"Imported task to {task_text}")
+
+
+@cache_app.command("list")
+def list_cache(
+    cache_dir: Annotated[
+        Path, typer.Option("--cache-dir", help="Execution cache directory.")
+    ] = Path(".repogym/cache"),
+) -> None:
+    """List cache entries and integrity state."""
+    try:
+        entries = ExecutionCache(cache_dir).inspect()
+    except (CacheError, OSError) as exc:
+        _fail(exc, ExitCode.ENVIRONMENT_ERROR)
+    table = Table("Key", "Status", "Bytes")
+    for entry in entries:
+        table.add_row(entry.key, "valid" if entry.valid else "corrupt", str(entry.size_bytes))
+    console.print(table)
+    console.print(f"{len(entries)} cache entr{'y' if len(entries) == 1 else 'ies'}")
+
+
+@cache_app.command("verify")
+def verify_cache(
+    cache_dir: Annotated[
+        Path, typer.Option("--cache-dir", help="Execution cache directory.")
+    ] = Path(".repogym/cache"),
+) -> None:
+    """Verify every published cache entry without changing it."""
+    try:
+        entries = ExecutionCache(cache_dir).inspect()
+    except (CacheError, OSError) as exc:
+        _fail(exc, ExitCode.ENVIRONMENT_ERROR)
+    corrupt = [entry for entry in entries if not entry.valid]
+    for entry in corrupt:
+        error_console.print(f"[red]FAIL[/red] {entry.key}: {escape(entry.error or 'invalid')}")
+    if corrupt:
+        raise typer.Exit(int(ExitCode.ENVIRONMENT_ERROR))
+    console.print(f"[green]PASS[/green] {len(entries)} cache entries verified")
+
+
+@cache_app.command("clear")
+def clear_cache(
+    cache_dir: Annotated[
+        Path, typer.Option("--cache-dir", help="Execution cache directory.")
+    ] = Path(".repogym/cache"),
+) -> None:
+    """Remove entries present when cache clearing begins."""
+    try:
+        removed = ExecutionCache(cache_dir).clear()
+    except (CacheError, OSError) as exc:
+        _fail(exc, ExitCode.ENVIRONMENT_ERROR)
+    console.print(f"Removed {removed} cache entr{'y' if removed == 1 else 'ies'}")
 
 
 @app.command()

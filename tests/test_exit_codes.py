@@ -95,7 +95,7 @@ def test_grade_maps_persisted_outcomes(
     expected: ExitCode,
 ) -> None:
     result = _result(status, score)
-    monkeypatch.setattr(cli_module, "grade_submission", lambda *_args: tmp_path)
+    monkeypatch.setattr(cli_module, "grade_submission", lambda *_args, **_kwargs: tmp_path)
     monkeypatch.setattr(cli_module, "load_run", lambda _path: (result, "", ""))
 
     invoked = CliRunner().invoke(

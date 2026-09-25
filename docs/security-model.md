@@ -36,6 +36,8 @@ secrets, restricted networking, and a dedicated unprivileged identity.
   including JUnit and SARIF; SARIF also re-redacts direct serializer input;
 - task bundle import rejects Zip Slip paths, links, name collisions, undeclared or oversized
   members, and integrity mismatches before atomically publishing a validated task;
+- execution cache entries contain only already-sanitized run artifacts plus hashes, reject links
+  and membership/hash mismatches, and are published by same-filesystem atomic rename;
 
 The `doctor` command deliberately prints the resolved test executable path so operators can
 confirm which interpreter it checked. Persisted run artifacts still redact that absolute path.
@@ -46,3 +48,8 @@ for OS-level isolation. A Docker executor is planned but not implemented.
 Cancellation is cooperative at the RepoGym API boundary: another thread or signal adapter must
 call `CancellationToken.cancel()`. It is not an authorization boundary and cannot revoke files,
 network operations, or other side effects completed before the process tree is stopped.
+
+Cache locking prevents duplicate same-key execution but is not a sandbox or a distributed lock.
+The key hashes interpreter and executor identity without persisting submission content or
+environment variables. Anyone able to modify the cache directory can cause eviction or denial of
+reuse; integrity validation prevents such changes from being silently trusted.
