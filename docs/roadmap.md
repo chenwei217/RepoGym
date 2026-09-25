@@ -10,6 +10,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   an active-interpreter binding for generic Python test commands;
 - preflight submission auditing, safe copying, path redaction, scoring, persisted evidence, and
   terminal, JSON, HTML, JUnit XML, and SARIF reports;
+- stable automation exit codes separating invalid input, execution, score, environment, and
+  internal failures;
 - deterministic comparison of persisted runs; and
 - Windows and Ubuntu CI on Python 3.11 and 3.12, with an 85% branch-coverage floor.
 
@@ -32,6 +34,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   stable ordering and an in-memory adapter for older runs.
 - JUnit XML exposes aggregate test outcomes and SARIF 2.1.0 exposes sorted scope violations with
   stable rules, optional relative locations, and shared path redaction.
+- CLI exit codes provide one outcome mapping across terminal and machine-oriented commands while
+  retaining Typer's standard syntax-error code.
 - Portable task package format version 1 exports the complete fingerprint input surface with
   hashes and a non-secret environment summary. Import validates archive safety, exact membership,
   integrity, task structure, and fingerprint before atomic publication.

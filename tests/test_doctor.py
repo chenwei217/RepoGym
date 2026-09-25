@@ -8,6 +8,7 @@ from typer.testing import CliRunner
 
 from repogym.cli import app
 from repogym.doctor import diagnose_task
+from repogym.exit_codes import ExitCode
 from repogym.loader import load_task
 from repogym.models import ExecutionResult
 from repogym.testing import run_tests
@@ -149,5 +150,5 @@ def test_doctor_cli_normal_and_failure_paths(valid_task: Path, tmp_path: Path) -
     assert "PASS python version" in healthy.stdout
     assert Path(sys.executable).name in healthy.stdout
     failed = runner.invoke(app, ["doctor", str(tmp_path / "missing")])
-    assert failed.exit_code == 1
+    assert failed.exit_code == ExitCode.ENVIRONMENT_ERROR
     assert "FAIL task definition" in failed.stdout

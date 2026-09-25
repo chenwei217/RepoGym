@@ -7,7 +7,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from repogym.exceptions import ValidationError
+from repogym.exceptions import ExecutionError, ValidationError
 from repogym.executors.base import CancellationToken, Executor
 from repogym.executors.local import LocalExecutor
 from repogym.models import ExecutionResult
@@ -62,11 +62,11 @@ def verify_task(
         initial = run_tests(task, workspace, runner, cancellation_token=cancellation_token)
         initial_counts = parse_test_counts(initial)
         if initial.cancelled:
-            raise ValidationError("Initial test run was cancelled")
+            raise ExecutionError("Initial test run was cancelled")
         if initial.timed_out:
-            raise ValidationError("Initial test run timed out")
+            raise ExecutionError("Initial test run timed out")
         if initial_counts.failed != task.expected.failing_tests_before:
-            raise ValidationError(
+            raise ExecutionError(
                 "Initial failure count mismatch: "
                 f"expected {task.expected.failing_tests_before}, got {initial_counts.failed}"
             )
@@ -74,13 +74,13 @@ def verify_task(
         fixed = run_tests(task, workspace, runner, cancellation_token=cancellation_token)
         fixed_counts = parse_test_counts(fixed)
         if fixed.cancelled:
-            raise ValidationError("Reference solution test run was cancelled")
+            raise ExecutionError("Reference solution test run was cancelled")
         if fixed.timed_out:
-            raise ValidationError("Reference solution test run timed out")
+            raise ExecutionError("Reference solution test run timed out")
         if fixed.return_code != 0 or fixed_counts.failed != 0:
-            raise ValidationError("Reference solution does not pass all tests")
+            raise ExecutionError("Reference solution does not pass all tests")
         if fixed_counts.passed != task.expected.passing_tests_after:
-            raise ValidationError(
+            raise ExecutionError(
                 "Reference passing count mismatch: "
                 f"expected {task.expected.passing_tests_after}, got {fixed_counts.passed}"
             )

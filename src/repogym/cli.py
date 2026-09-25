@@ -10,12 +10,16 @@ import typer
 from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
+from typer._click.core import Context
+from typer._click.exceptions import ClickException
+from typer.core import TyperGroup
 
 from repogym import __version__
 from repogym.bundles import export_task_bundle, import_task_bundle
 from repogym.comparison import generate_comparison
 from repogym.doctor import diagnose_task
-from repogym.exceptions import RepoGymError
+from repogym.exceptions import ExecutionError, RepoGymError
+from repogym.exit_codes import ExitCode
 from repogym.grader import grade_submission
 from repogym.loader import load_task
 from repogym.reports import generate_report, load_run, render_terminal
@@ -23,7 +27,32 @@ from repogym.security import redact_sensitive_text
 from repogym.validator import validate_task
 from repogym.verifier import verify_task
 
-app = typer.Typer(help="Build and grade reproducible AI coding tasks.", no_args_is_help=True)
+
+class RepoGymGroup(TyperGroup):
+    """Convert unexpected command failures to the stable internal-error code."""
+
+    def invoke(self, ctx: Context) -> object:
+        try:
+            return super().invoke(ctx)
+        except (ClickException, typer.Exit, typer.Abort):
+            raise
+        except OSError as exc:
+            _print_error(exc)
+            raise typer.Exit(int(ExitCode.ENVIRONMENT_ERROR)) from exc
+        except Exception as exc:
+            _print_error(exc)
+            raise typer.Exit(int(ExitCode.INTERNAL_ERROR)) from exc
+
+
+app = typer.Typer(
+    help="Build and grade reproducible AI coding tasks.",
+    no_args_is_help=True,
+    cls=RepoGymGroup,
+    epilog=(
+        "Exit codes: 0 success, 10 invalid task/input, 20 execution failed, "
+        "30 score below 100, 40 environment error, 70 internal error."
+    ),
+)
 bundle_app = typer.Typer(help="Export and import verified portable task bundles.")
 app.add_typer(bundle_app, name="bundle")
 console = Console()
@@ -37,12 +66,16 @@ def main(debug: Annotated[bool, typer.Option("--debug", help="Show tracebacks.")
     _debug = debug
 
 
-def _fail(exc: Exception) -> None:
+def _print_error(exc: Exception) -> None:
     if _debug:
         traceback.print_exc()
     else:
         error_console.print(f"[red]Error:[/red] {escape(redact_sensitive_text(str(exc)))}")
-    raise typer.Exit(1)
+
+
+def _fail(exc: Exception, code: ExitCode) -> None:
+    _print_error(exc)
+    raise typer.Exit(int(code))
 
 
 @app.command("list")
@@ -51,7 +84,7 @@ def list_tasks(
 ) -> None:
     """List discoverable tasks."""
     if not tasks_dir.is_dir():
-        _fail(RepoGymError(f"Tasks directory does not exist: {tasks_dir}"))
+        _fail(RepoGymError(f"Tasks directory does not exist: {tasks_dir}"), ExitCode.TASK_INVALID)
     table = Table("ID", "Title", "Difficulty", "Language")
     found = 0
     for directory in sorted(path for path in tasks_dir.iterdir() if path.is_dir()):
@@ -74,7 +107,7 @@ def validate(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> N
     if report.errors:
         for error in report.errors:
             error_console.print(f"[red]FAIL[/red] {escape(redact_sensitive_text(error, [task]))}")
-        raise typer.Exit(1)
+        raise typer.Exit(int(ExitCode.TASK_INVALID))
     console.print("\n[bold green]Validation passed.[/bold green]")
 
 
@@ -95,7 +128,7 @@ def doctor(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> Non
             f"{escape(check.name)}: {escape(message)}"
         )
     if not report.healthy:
-        raise typer.Exit(1)
+        raise typer.Exit(int(ExitCode.ENVIRONMENT_ERROR))
 
 
 @app.command()
@@ -103,8 +136,10 @@ def verify(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> Non
     """Prove that the starter fails and the reference patch passes."""
     try:
         report = verify_task(task)
+    except ExecutionError as exc:
+        _fail(exc, ExitCode.EXECUTION_FAILED)
     except RepoGymError as exc:
-        _fail(exc)
+        _fail(exc, ExitCode.TASK_INVALID)
     initial_failed = report.initial.stdout + report.initial.stderr
     console.print("[green]PASS[/green] Starter produced the expected failures")
     console.print(f"[green]PASS[/green] Reference patch changed: {', '.join(report.patch_files)}")
@@ -125,11 +160,15 @@ def grade(
         run_dir = grade_submission(task, submission)
         result, _, _ = load_run(run_dir)
     except RepoGymError as exc:
-        _fail(exc)
+        _fail(exc, ExitCode.TASK_INVALID)
     render_terminal(result, console)
     console.print(
         f"Run artifacts: [bold]{escape(redact_sensitive_text(str(run_dir), [Path.cwd()]))}[/bold]"
     )
+    if result.status != "completed":
+        raise typer.Exit(int(ExitCode.EXECUTION_FAILED))
+    if result.score < 100:
+        raise typer.Exit(int(ExitCode.SCORE_NOT_PASSED))
 
 
 @app.command()
@@ -143,11 +182,11 @@ def report(
 ) -> None:
     """Render an existing grade result."""
     if format_name == "html" and output is None:
-        _fail(RepoGymError("--output is required for HTML reports"))
+        _fail(RepoGymError("--output is required for HTML reports"), ExitCode.TASK_INVALID)
     try:
         rendered = generate_report(run, format_name, output, console)
     except RepoGymError as exc:
-        _fail(exc)
+        _fail(exc, ExitCode.ENVIRONMENT_ERROR)
     if rendered is not None and output is None:
         console.print(rendered, markup=False)
     elif output is not None:
@@ -167,7 +206,7 @@ def compare(
     try:
         rendered = generate_comparison(run_a, run_b, format_name, console, output)
     except RepoGymError as exc:
-        _fail(exc)
+        _fail(exc, ExitCode.ENVIRONMENT_ERROR)
     if rendered is not None and output is None:
         console.print(rendered, markup=False)
     elif output is not None:
@@ -183,7 +222,7 @@ def export_bundle(
     try:
         manifest = export_task_bundle(task, output)
     except RepoGymError as exc:
-        _fail(exc)
+        _fail(exc, ExitCode.TASK_INVALID)
     output_text = redact_sensitive_text(str(output), [Path.cwd()])
     console.print(f"Exported {manifest.task_id} ({len(manifest.files)} files) to {output_text}")
 
@@ -199,7 +238,7 @@ def import_bundle(
     try:
         task_directory = import_task_bundle(bundle, destination)
     except RepoGymError as exc:
-        _fail(exc)
+        _fail(exc, ExitCode.TASK_INVALID)
     task_text = redact_sensitive_text(str(task_directory), [Path.cwd()])
     console.print(f"Imported task to {task_text}")
 

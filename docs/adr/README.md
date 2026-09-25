@@ -15,3 +15,4 @@ feature documentation.
 - [0004: Cooperative execution cancellation](0004-cooperative-execution-cancellation.md)
 - [0005: Versioned structured execution evidence](0005-versioned-execution-evidence.md)
 - [0006: Deterministic machine report formats](0006-machine-report-formats.md)
+- [0007: Stable automation exit codes](0007-stable-automation-exit-codes.md)

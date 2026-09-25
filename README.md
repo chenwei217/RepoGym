@@ -76,6 +76,30 @@ pytest --cov=repogym --cov-report=term-missing
 
 Pass `--debug` before a command to show tracebacks for expected domain errors.
 
+### Automation exit codes
+
+RepoGym uses stable process codes: `0` success, `10` invalid task or input, `20` execution
+failure, `30` a completed grade below 100, `40` environment or artifact I/O failure, and `70`
+an unexpected internal error. Command-line syntax errors remain Typer's standard code `2`.
+
+In POSIX shells, capture the code immediately:
+
+```bash
+repogym grade tasks/python-cache-ttl --submission candidate
+code=$?
+test "$code" -eq 0 || echo "RepoGym outcome: $code"
+```
+
+PowerShell exposes the same contract through `$LASTEXITCODE`:
+
+```powershell
+repogym grade tasks/python-cache-ttl --submission candidate
+if ($LASTEXITCODE -eq 30) { Write-Host "Valid run, score below 100" }
+```
+
+CI runners fail a step naturally for every nonzero outcome; branch on `30` only when a below-100
+candidate is expected data rather than a failed gate.
+
 ## Reproducibility and diagnostics
 
 Every grade stores a SHA-256 task fingerprint in both `metadata.json` and `result.json`. The

@@ -12,6 +12,7 @@ Changelog, and versions follow Semantic Versioning.
 - Cooperative execution cancellation with process-tree cleanup and persisted cancellation status
 - Versioned, deterministic command/test/environment/artifact evidence documents
 - Deterministic JUnit XML and SARIF 2.1.0 machine reports
+- Stable CLI exit codes for invalid input, execution, score, environment, and internal failures
 - Deterministic SHA-256 task fingerprints persisted with run metadata
 - `repogym doctor` environment diagnostics
 - Terminal and JSON comparison of persisted grading runs

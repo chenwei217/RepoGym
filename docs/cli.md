@@ -1,7 +1,16 @@
 # CLI reference
 
-All commands return zero on success and nonzero for validation, environment, security, or report
-errors. Put `--debug` before the subcommand to include a traceback.
+Commands use the stable codes below. Put `--debug` before the subcommand to include a traceback.
+
+| Code | Meaning |
+| ---: | --- |
+| `0` | Command succeeded; `grade` also means a score of exactly 100 |
+| `2` | Command syntax or option error reported by Typer |
+| `10` | Task, submission, bundle, or command input is invalid |
+| `20` | Test execution, verification, timeout, cancellation, or launch failed |
+| `30` | Grading completed, but the score is below 100 |
+| `40` | Environment, diagnostic, run-artifact, or filesystem operation failed |
+| `70` | Unexpected internal RepoGym error |
 
 | Command | Reads code | Executes task code | Writes artifacts |
 | --- | --- | --- | --- |
@@ -29,3 +38,9 @@ be printed or written with `--output`.
 `bundle export` refuses to overwrite an existing path. `bundle import` requires an existing
 destination directory, validates the complete archive, and refuses to replace an existing task.
 See [Task bundles](task-bundles.md).
+
+The same outcome has the same code in human and machine modes: for example, missing run
+artifacts return `40` for terminal, JSON, JUnit, and SARIF reports, and both comparison formats.
+POSIX shells read the code from `$?`; PowerShell reads `$LASTEXITCODE`. CI steps fail naturally
+for every nonzero value. If a pipeline intentionally evaluates partial solutions, explicitly
+accept `30` while continuing to reject `10`, `20`, `40`, and `70`.

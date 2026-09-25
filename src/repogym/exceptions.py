@@ -13,6 +13,10 @@ class ValidationError(RepoGymError):
     """Raised when a task directory is invalid."""
 
 
+class ExecutionError(RepoGymError):
+    """Raised when a configured task execution cannot satisfy its contract."""
+
+
 class FingerprintError(RepoGymError):
     """Raised when a complete deterministic task fingerprint cannot be computed."""
 

@@ -8,8 +8,9 @@ from rich.console import Console
 from typer.testing import CliRunner
 
 from repogym.cli import app
-from repogym.exceptions import ReportError, SecurityError, ValidationError
+from repogym.exceptions import ExecutionError, ReportError, SecurityError, ValidationError
 from repogym.executors import CancellationToken
+from repogym.exit_codes import ExitCode
 from repogym.grader import grade_submission
 from repogym.models import ExecutionResult
 from repogym.reports import generate_report, load_run
@@ -79,7 +80,7 @@ def test_verify_rejects_forbidden_reference_patch(valid_task: Path) -> None:
 def test_verify_honors_precancelled_token(valid_task: Path) -> None:
     token = CancellationToken()
     token.cancel()
-    with pytest.raises(ValidationError, match="cancelled"):
+    with pytest.raises(ExecutionError, match="cancelled"):
         verify_task(valid_task, cancellation_token=token)
 
 
@@ -286,7 +287,7 @@ def test_cli_help_list_validate_and_version() -> None:
 def test_cli_validation_failure_and_html_output_requirement(tmp_path: Path) -> None:
     runner = CliRunner()
     invalid = runner.invoke(app, ["validate", str(tmp_path / "missing")])
-    assert invalid.exit_code == 1
+    assert invalid.exit_code == ExitCode.TASK_INVALID
     report = runner.invoke(app, ["report", str(tmp_path), "--format", "html"])
-    assert report.exit_code == 1
+    assert report.exit_code == ExitCode.TASK_INVALID
     assert "--output is required" in report.stderr

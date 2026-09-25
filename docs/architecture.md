@@ -29,6 +29,12 @@ The public Python surface is intentionally small: `load_task`, `validate_task`, 
 points. The Typer CLI is a thin adapter over those services. Executor implementations conform to
 the `Executor` protocol; today only `LocalExecutor` is shipped.
 
+The CLI translates domain outcomes into a versioned automation contract: invalid input, execution
+failure, a completed score below 100, environment/I/O failure, and an unexpected internal error
+have distinct codes. A top-level group boundary catches only unwrapped filesystem and unexpected
+exceptions; command-specific domain failures retain their more precise category. Framework usage
+errors keep Typer's code 2.
+
 The configured test command is generic rather than pytest-specific, but the MVP count adapter
 parses pytest summary output. Public tests are run separately for regression scoring. Submission
 deletions are not represented by an overlay directory in the MVP; submissions add or replace

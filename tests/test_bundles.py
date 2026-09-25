@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 from repogym.bundles import MANIFEST_NAME, export_task_bundle, import_task_bundle
 from repogym.cli import app
 from repogym.exceptions import BundleError
+from repogym.exit_codes import ExitCode
 from repogym.loader import load_task
 from repogym.reproducibility import task_fingerprint
 from repogym.security import file_manifest
@@ -300,5 +301,5 @@ def test_bundle_cli_exports_imports_and_reports_errors(valid_task: Path, tmp_pat
     repeated = runner.invoke(
         app, ["bundle", "import", str(bundle), "--destination", str(destination)]
     )
-    assert repeated.exit_code == 1
+    assert repeated.exit_code == ExitCode.TASK_INVALID
     assert "already exists" in repeated.stderr

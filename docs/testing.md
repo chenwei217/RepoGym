@@ -29,6 +29,10 @@ JUnit tests parse the emitted XML and assert counts, failures, derived skips, du
 and empty results. SARIF tests assert the 2.1.0 contract, stable rule and result ordering, relative
 locations, line numbers, empty results, deterministic serialization, and absolute-path redaction.
 
+CLI contract tests assert the numeric exit-code enum, validation versus environment failures,
+execution and score outcomes, terminal/machine-format parity, unhandled filesystem errors,
+unexpected internal errors, and preservation of the framework's usage-error code.
+
 Executor coverage includes independent stdout/stderr limits, encoded Unicode byte boundaries,
 large single writes, timeout capture, and persisted truncation evidence. Assertions use encoded
 byte counts rather than platform newline assumptions.
