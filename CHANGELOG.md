@@ -15,6 +15,7 @@ Changelog, and versions follow Semantic Versioning.
 - Recursive timeout cleanup for the exact local process tree
 - CLI output-file support for terminal and JSON run comparisons
 - Reproducibility and run-comparison workflow documentation
+- Versioned task bundle export and integrity-checked atomic import
 
 ### Changed
 

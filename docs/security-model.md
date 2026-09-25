@@ -29,6 +29,8 @@ secrets, restricted networking, and a dedicated unprivileged identity.
 - temporary workspaces are managed by the standard library and cleaned on exit;
 - Jinja autoescaping protects the HTML report from task output injection.
 - absolute paths are redacted consistently from persisted artifacts and all report formats;
+- task bundle import rejects Zip Slip paths, links, name collisions, undeclared or oversized
+  members, and integrity mismatches before atomically publishing a validated task;
 
 The `doctor` command deliberately prints the resolved test executable path so operators can
 confirm which interpreter it checked. Persisted run artifacts still redact that absolute path.

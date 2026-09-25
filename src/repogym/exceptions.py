@@ -27,3 +27,7 @@ class PatchError(RepoGymError):
 
 class ReportError(RepoGymError):
     """Raised when a run report is incomplete or invalid."""
+
+
+class BundleError(RepoGymError):
+    """Raised when a portable task bundle cannot be created or imported."""

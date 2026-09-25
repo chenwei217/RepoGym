@@ -15,8 +15,8 @@ def normalize_fingerprint_path(path: str) -> str:
     return path.replace("\\", "/")
 
 
-def task_fingerprint(task_directory: Path, task: TaskSpec) -> str:
-    """Hash the complete task input surface in a stable path order."""
+def task_input_files(task_directory: Path, task: TaskSpec) -> list[tuple[str, Path]]:
+    """Return the complete, stable task input surface used by its fingerprint."""
     task_dir = task_directory.resolve()
     required_roots = [
         (task_dir / "task.yaml", "file"),
@@ -45,13 +45,18 @@ def task_fingerprint(task_directory: Path, task: TaskSpec) -> str:
                 raise SecurityError(f"Symbolic links are not allowed in task fingerprints: {path}")
             if path.is_file():
                 files.add(path)
+    return [
+        (normalize_fingerprint_path(str(path.relative_to(task_dir))), path)
+        for path in sorted(
+            files, key=lambda item: normalize_fingerprint_path(str(item.relative_to(task_dir)))
+        )
+    ]
 
+
+def task_fingerprint(task_directory: Path, task: TaskSpec) -> str:
+    """Hash the complete task input surface in a stable path order."""
     digest = hashlib.sha256()
-    for path in sorted(
-        files,
-        key=lambda item: normalize_fingerprint_path(str(item.relative_to(task_dir))),
-    ):
-        relative_text = normalize_fingerprint_path(str(path.relative_to(task_dir)))
+    for relative_text, path in task_input_files(task_directory, task):
         relative_bytes = relative_text.encode("utf-8")
         try:
             content = path.read_bytes()

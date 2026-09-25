@@ -20,6 +20,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - Terminal, JSON, and self-contained HTML reports
 - Preflight submission auditing for scope, links, reparse points, size, and sensitive filenames
 - Process-tree timeout cleanup plus unified local-path redaction in every report format
+- Integrity-checked, versioned ZIP export and atomic import of portable tasks
 - Two original, runnable Python tasks
 
 ## Quick start
@@ -43,6 +44,8 @@ repogym verify tasks/python-cache-ttl
 repogym grade tasks/python-cache-ttl --submission examples/submissions/cache-ttl-fixed
 repogym report .repogym/runs/<run-id> --format html --output report.html
 repogym compare .repogym/runs/<run-a> .repogym/runs/<run-b>
+repogym bundle export tasks/python-cache-ttl python-cache-ttl.zip
+repogym bundle import python-cache-ttl.zip --destination imported-tasks
 ```
 
 Run the project checks:
@@ -65,6 +68,8 @@ pytest --cov=repogym --cov-report=term-missing
 | `repogym grade TASK --submission DIR` | Grade a candidate in a temporary workspace |
 | `repogym report RUN --format terminal\|json\|html [--output FILE]` | Re-render saved run artifacts |
 | `repogym compare RUN_A RUN_B --format terminal\|json [--output FILE]` | Compare two persisted runs |
+| `repogym bundle export TASK OUTPUT` | Export a versioned, integrity-checked task package |
+| `repogym bundle import BUNDLE --destination DIR` | Verify and atomically import a task package |
 | `repogym version` | Print the installed version |
 
 Pass `--debug` before a command to show tracebacks for expected domain errors.
@@ -211,8 +216,8 @@ terminal, HTML, and comparisons; environment variables and tokens are never reco
 automatically.
 
 Detailed workflows: [CLI reference](docs/cli.md),
-[reproducibility](docs/reproducibility.md), [run comparison](docs/run-comparison.md), and
-[project milestones](docs/milestones.md).
+[reproducibility](docs/reproducibility.md), [run comparison](docs/run-comparison.md),
+[task bundles](docs/task-bundles.md), and [project milestones](docs/milestones.md).
 
 ## Roadmap
 

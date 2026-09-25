@@ -8,9 +8,11 @@ and stores the fingerprint alongside structured execution evidence. A generic `p
 ambient `PATH` entry from changing the evaluator runtime. Reports redact local paths before they
 are persisted or rendered.
 
-The task directory remains the source artifact today. Portable package export/import, including a
-manifest and integrity verification, is tracked as the highest-priority follow-up in the
-[engineering roadmap](roadmap.md).
+Package format version 1 makes the same input surface portable. Its sorted manifest records the
+task ID and version, task fingerprint, exporter environment summary, and each file's normalized
+path, byte length, and SHA-256 digest. ZIP timestamps and permissions are fixed, so repeated
+exports in the same environment are byte-for-byte stable. Import recomputes every digest and the
+task fingerprint before publishing the task. See [Task bundles](task-bundles.md).
 
 `task_fingerprint()` computes a lowercase SHA-256 digest from the complete task input surface:
 

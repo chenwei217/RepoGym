@@ -17,26 +17,29 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 | Priority | Need | Acceptance criteria | Likely modules |
 | --- | --- | --- | --- |
-| P0 | Portable reproducible task packages | Export has a manifest, hashes, format version, and environment summary; import rejects tampering, unsafe ZIP entries, missing files, and invalid tasks before atomically publishing them. | `bundles`, `cli`, `security`, `reproducibility` |
 | P1 | Versioned TaskSpec migrations | A declared schema version selects a documented migration path; legacy fixtures load identically or fail with an actionable error. | `models`, `loader`, `validator` |
 | P1 | Bounded execution output and cancellation | A caller can cancel an execution; stdout/stderr are bounded with explicit truncation evidence; timeout and cancellation clean the same process tree on Windows and Linux. | `executors`, `models`, `grader` |
 | P1 | Machine-oriented reports | JUnit XML and SARIF serializers have stable schemas, redact sensitive paths, and carry actionable locations when available. | `reports`, `cli`, `models` |
 | P2 | Cache and incremental execution | Cache keys include task fingerprint, resolved command, and relevant inputs; writes are atomic, corrupt entries recover, and CLI inspection/clearing is tested. | `cache`, `grader`, `cli` |
 | P2 | Stable plugin contracts | Versioned loader, executor, and reporter protocols isolate load failures and have conflict tests plus a minimal example. | `plugins`, `executors`, `reports` |
 
+## Completed roadmap items
+
+- Portable task package format version 1 exports the complete fingerprint input surface with
+  hashes and a non-secret environment summary. Import validates archive safety, exact membership,
+  integrity, task structure, and fingerprint before atomic publication.
+
 ## Test gaps
 
 - Nested-child timeout coverage is intentionally platform-constrained; Windows link tests skip
   when the runner lacks link-creation privileges.
-- No package-integrity, cache-contention, cancellation, schema-migration, JUnit, SARIF, or plugin
-  contract tests exist yet because those capabilities do not exist.
+- No cache-contention, cancellation, schema-migration, JUnit, SARIF, or plugin contract tests
+  exist yet because those capabilities do not exist.
 - Core tests need no network after dependencies are installed. A fresh editable installation does
   require package retrieval unless a local wheelhouse is supplied.
 
 ## Delivery order
 
-The next engineering change is the P0 task-package feature. It closes the gap between a
-fingerprinted task directory and a portable artifact without broadening the execution trust
-boundary. TaskSpec migrations, bounded lifecycle controls, and machine reports follow because
-they each build on stable task and evidence contracts. Caching and plugins remain later: their
-contracts should be designed after the portable package and evidence models are stable.
+TaskSpec migrations, bounded lifecycle controls, and machine reports are the next priorities
+because they build on stable task, package, and evidence contracts. Caching and plugins remain
+later: their contracts should be designed after those formats are stable.

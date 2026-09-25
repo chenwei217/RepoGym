@@ -20,6 +20,7 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
 9. `scoring` computes independent deterministic dimensions.
 10. `reports` rehydrates `result.json` and renders terminal, JSON, or escaped HTML.
 11. `comparison` computes stable A-to-B deltas without re-executing either run.
+12. `bundles` exports the fingerprint input surface and verifies it before atomic import.
 
 The public Python surface is intentionally small: `load_task`, `validate_task`, `verify_task`,
 `grade_submission`, report generation, and comparison are the supported orchestration entry
@@ -56,6 +57,7 @@ line-ending or encoding changes visible.
 Task definitions and run artifacts are versioned independently: `TaskSpec.version` describes a
 task contract, while result loading contains an explicit compatibility adapter for the original
 execution-evidence field name. There is not yet a general TaskSpec schema migration registry.
-Likewise, task inputs can be fingerprinted and verified in place, but they cannot yet be exported
-as a self-validating portable package. Those two limitations are tracked in the engineering
-roadmap rather than hidden behind unstable extension points.
+Task inputs can also be exported as package format version 1. Import accepts exactly the members
+declared by the manifest and publishes a task only after archive safety, content integrity,
+TaskSpec validation, and full fingerprint verification succeed. A general TaskSpec schema
+migration registry remains future work and is tracked in the engineering roadmap.

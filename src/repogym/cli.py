@@ -12,6 +12,7 @@ from rich.markup import escape
 from rich.table import Table
 
 from repogym import __version__
+from repogym.bundles import export_task_bundle, import_task_bundle
 from repogym.comparison import generate_comparison
 from repogym.doctor import diagnose_task
 from repogym.exceptions import RepoGymError
@@ -23,6 +24,8 @@ from repogym.validator import validate_task
 from repogym.verifier import verify_task
 
 app = typer.Typer(help="Build and grade reproducible AI coding tasks.", no_args_is_help=True)
+bundle_app = typer.Typer(help="Export and import verified portable task bundles.")
+app.add_typer(bundle_app, name="bundle")
 console = Console()
 error_console = Console(stderr=True)
 _debug = False
@@ -168,6 +171,36 @@ def compare(
         console.print(rendered, markup=False)
     elif output is not None:
         console.print(f"Comparison written to {escape(redact_sensitive_text(str(output)))}")
+
+
+@bundle_app.command("export")
+def export_bundle(
+    task: Annotated[Path, typer.Argument(help="Task directory.")],
+    output: Annotated[Path, typer.Argument(help="New .zip bundle path.")],
+) -> None:
+    """Export a validated task as an integrity-checked ZIP package."""
+    try:
+        manifest = export_task_bundle(task, output)
+    except RepoGymError as exc:
+        _fail(exc)
+    output_text = redact_sensitive_text(str(output), [Path.cwd()])
+    console.print(f"Exported {manifest.task_id} ({len(manifest.files)} files) to {output_text}")
+
+
+@bundle_app.command("import")
+def import_bundle(
+    bundle: Annotated[Path, typer.Argument(help="Verified .zip task bundle.")],
+    destination: Annotated[
+        Path, typer.Option("--destination", help="Existing parent directory for the task.")
+    ],
+) -> None:
+    """Verify and atomically import a task bundle."""
+    try:
+        task_directory = import_task_bundle(bundle, destination)
+    except RepoGymError as exc:
+        _fail(exc)
+    task_text = redact_sensitive_text(str(task_directory), [Path.cwd()])
+    console.print(f"Imported task to {task_text}")
 
 
 @app.command()
