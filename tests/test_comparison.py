@@ -9,7 +9,9 @@ from typer.testing import CliRunner
 
 from repogym.cli import app
 from repogym.comparison import compare_runs, generate_comparison
+from repogym.environment import environment_fingerprint
 from repogym.exceptions import ReportError
+from repogym.models import RuntimeEnvironmentSnapshot
 
 
 def _write_run(
@@ -25,6 +27,7 @@ def _write_run(
     status: str = "completed",
     timed_out: bool = False,
     test_evidence: dict[str, object] | None = None,
+    environment: dict[str, object] | None = None,
 ) -> Path:
     run = root / run_id
     run.mkdir()
@@ -58,6 +61,8 @@ def _write_run(
     }
     if test_evidence is not None:
         result["test_evidence"] = test_evidence
+    if environment is not None:
+        result["environment"] = environment
     (run / "result.json").write_text(json.dumps(result), encoding="utf-8")
     (run / "stdout.txt").write_text("", encoding="utf-8")
     (run / "stderr.txt").write_text("", encoding="utf-8")
@@ -238,4 +243,106 @@ def test_compare_marks_legacy_per_test_evidence_unavailable(tmp_path: Path) -> N
 
     assert comparison.test_cases.warning == (
         "Per-test comparison unavailable (A=legacy_run, B=legacy_run)."
+    )
+
+
+def _runtime_environment(
+    *,
+    python_version: str,
+    rich_version: str,
+) -> dict[str, object]:
+    snapshot = RuntimeEnvironmentSnapshot(
+        python_implementation="CPython",
+        python_version=python_version,
+        operating_system="linux",
+        operating_system_release="6.8",
+        architecture="x86_64",
+        dependencies={"pydantic": "2.11.0", "rich": rich_version},
+        repogym_version="0.1.0",
+        executor="local:stdout=1048576:stderr=1048576",
+    )
+    return {
+        "schema_version": 1,
+        "availability": "available",
+        "fingerprint": environment_fingerprint(snapshot),
+        "snapshot": snapshot.model_dump(mode="json"),
+        "reason": "collected",
+    }
+
+
+def test_compare_reports_sorted_runtime_environment_differences(
+    tmp_path: Path,
+) -> None:
+    run_a = _write_run(
+        tmp_path,
+        "run-a",
+        score=50,
+        passed=2,
+        duration=1,
+        violations=[],
+        environment=_runtime_environment(python_version="3.11.9", rich_version="13.9.0"),
+    )
+    run_b = _write_run(
+        tmp_path,
+        "run-b",
+        score=50,
+        passed=2,
+        duration=1,
+        violations=[],
+        environment=_runtime_environment(python_version="3.12.8", rich_version="14.0.0"),
+    )
+
+    comparison = compare_runs(run_a, run_b)
+
+    assert comparison.environment.matches is False
+    assert [item.field for item in comparison.environment.differences] == [
+        "dependency.rich",
+        "python_version",
+    ]
+    assert comparison.warnings[-1] == (
+        "Runtime environments differ; result changes may not be task-only."
+    )
+    output = Console(record=True, width=140)
+    generate_comparison(run_a, run_b, "terminal", output)
+    terminal = output.export_text()
+    assert "Runtime environment differences" in terminal
+    assert "python_version: 3.11.9 -> 3.12.8" in terminal
+
+
+def test_compare_reports_matching_and_legacy_runtime_environments(
+    tmp_path: Path,
+) -> None:
+    environment = _runtime_environment(python_version="3.11.9", rich_version="13.9.0")
+    run_a = _write_run(
+        tmp_path,
+        "run-a",
+        score=50,
+        passed=2,
+        duration=1,
+        violations=[],
+        environment=environment,
+    )
+    run_b = _write_run(
+        tmp_path,
+        "run-b",
+        score=50,
+        passed=2,
+        duration=1,
+        violations=[],
+        environment=environment,
+    )
+    legacy = _write_run(
+        tmp_path,
+        "legacy",
+        score=50,
+        passed=2,
+        duration=1,
+        violations=[],
+    )
+
+    assert compare_runs(run_a, run_b).environment.matches is True
+    unavailable = compare_runs(run_a, legacy).environment
+    assert unavailable.matches is None
+    assert unavailable.warning == (
+        "Runtime environment comparison unavailable (A=collected, B=legacy_run)."
     )

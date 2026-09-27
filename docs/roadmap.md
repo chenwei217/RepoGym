@@ -26,7 +26,6 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 | Priority | Need | Acceptance criteria | Likely modules |
 | --- | --- | --- | --- |
 | P1 | Sandboxed execution backend | A separately configured backend enforces filesystem, network, CPU, memory, and process limits without weakening the local executor contract. | `executors`, `plugins`, deployment docs |
-| P2 | Comparable runtime environment | Persist a versioned non-secret environment digest and report meaningful run-to-run differences. | `reproducibility`, `evidence`, `comparison` |
 | P2 | Task authoring workflow | Scaffold minimal valid tasks and lint author-facing completeness and reproducibility risks. | `cli`, `validator`, `authoring` |
 
 ## Completed roadmap items
@@ -37,8 +36,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   recording original byte counts and truncation evidence.
 - A thread-safe cancellation token stops launches or active process trees, records a distinct
   cancelled result, and prevents remaining grading commands from starting.
-- Evidence schema v1 unifies command, test, non-secret environment, and artifact records with
-  stable ordering and an in-memory adapter for older runs.
+- Evidence schema v2 unifies command, aggregate/per-test, persisted runtime-environment, and
+  artifact records with stable ordering and in-memory adapters for older runs.
 - JUnit XML exposes aggregate test outcomes and SARIF 2.1.0 exposes sorted scope violations with
   stable rules, optional relative locations, and shared path redaction.
 - CLI exit codes provide one outcome mapping across terminal and machine-oriented commands while
@@ -55,6 +54,9 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 - Pytest execution persists sorted versioned case identities, outcomes, durations, bounded failure
   summaries, and output references. Reports render real cases, comparisons locate regressions,
   recoveries, and significant duration changes, and old runs remain explicitly compatible.
+- Environment schema v1 persists a fixed non-sensitive runtime allowlist and canonical digest.
+  CLI and reports render it, cache keys include it, and comparison explains sorted differences
+  without substituting the reader's environment for legacy runs.
 
 ## Test gaps
 
@@ -69,5 +71,5 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 ## Delivery order
 
-A separately configured sandboxed backend is the next security priority. Comparable runtime
-environment evidence and task-authoring diagnostics are the next reproducibility priorities.
+A separately configured sandboxed backend is the next security priority. Task-authoring
+diagnostics are the next reproducibility priority.

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -171,6 +173,49 @@ class CacheEvidence(BaseModel):
     source_run_id: str | None = None
 
 
+class RuntimeEnvironmentSnapshot(StrictModel):
+    python_implementation: str = Field(min_length=1)
+    python_version: str = Field(min_length=1)
+    operating_system: str = Field(min_length=1)
+    operating_system_release: str = Field(min_length=1)
+    architecture: str = Field(min_length=1)
+    dependencies: dict[str, str]
+    repogym_version: str = Field(min_length=1)
+    executor: str = Field(min_length=1)
+
+    def fingerprint(self) -> str:
+        payload = json.dumps(
+            self.model_dump(mode="json"),
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()
+
+
+class RuntimeEnvironmentEvidence(StrictModel):
+    schema_version: Literal[1] = 1
+    availability: Literal["available", "unavailable"]
+    fingerprint: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    snapshot: RuntimeEnvironmentSnapshot | None = None
+    reason: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def valid_state(self) -> RuntimeEnvironmentEvidence:
+        if self.availability == "available":
+            if self.snapshot is None or self.fingerprint is None or self.reason != "collected":
+                raise ValueError("available environment evidence must contain a collected snapshot")
+            if self.fingerprint != self.snapshot.fingerprint():
+                raise ValueError("environment fingerprint does not match its snapshot")
+        elif self.snapshot is not None or self.fingerprint is not None:
+            raise ValueError("unavailable environment evidence cannot contain a snapshot")
+        return self
+
+    @classmethod
+    def unavailable(cls, reason: str) -> RuntimeEnvironmentEvidence:
+        return cls(availability="unavailable", reason=reason)
+
+
 class GradeResult(BaseModel):
     task_id: str
     task_fingerprint: str | None = None
@@ -185,4 +230,7 @@ class GradeResult(BaseModel):
     cache: CacheEvidence | None = None
     test_evidence: TestCaseEvidence = Field(
         default_factory=lambda: TestCaseEvidence.unavailable("legacy_run")
+    )
+    environment: RuntimeEnvironmentEvidence = Field(
+        default_factory=lambda: RuntimeEnvironmentEvidence.unavailable("legacy_run")
     )

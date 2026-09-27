@@ -63,6 +63,22 @@ class TestCaseComparison(BaseModel):
     duration_changes: list[TestCaseDurationChange]
 
 
+class EnvironmentDifference(BaseModel):
+    field: str
+    run_a: str | None
+    run_b: str | None
+
+
+class EnvironmentComparison(BaseModel):
+    availability_a: str
+    availability_b: str
+    matches: bool | None
+    fingerprint_a: str | None
+    fingerprint_b: str | None
+    warning: str | None = None
+    differences: list[EnvironmentDifference]
+
+
 class RunComparison(BaseModel):
     run_a: str
     run_b: str
@@ -79,6 +95,7 @@ class RunComparison(BaseModel):
     violations_added: list[str]
     violations_removed: list[str]
     test_cases: TestCaseComparison
+    environment: EnvironmentComparison
 
 
 def _metric(value_a: float, value_b: float, digits: int = 2) -> MetricComparison:
@@ -151,6 +168,67 @@ def _compare_test_cases(result_a: GradeResult, result_b: GradeResult) -> TestCas
     )
 
 
+def _environment_fields(result: GradeResult) -> dict[str, str]:
+    snapshot = result.environment.snapshot
+    if snapshot is None:
+        return {}
+    fields = {
+        "architecture": snapshot.architecture,
+        "executor": snapshot.executor,
+        "operating_system": snapshot.operating_system,
+        "operating_system_release": snapshot.operating_system_release,
+        "python_implementation": snapshot.python_implementation,
+        "python_version": snapshot.python_version,
+        "repogym_version": snapshot.repogym_version,
+    }
+    fields.update(
+        {f"dependency.{name}": version for name, version in snapshot.dependencies.items()}
+    )
+    return fields
+
+
+def _compare_environments(
+    result_a: GradeResult,
+    result_b: GradeResult,
+) -> EnvironmentComparison:
+    environment_a = result_a.environment
+    environment_b = result_b.environment
+    if environment_a.availability != "available" or environment_b.availability != "available":
+        reasons = f"A={environment_a.reason}, B={environment_b.reason}"
+        return EnvironmentComparison(
+            availability_a=environment_a.availability,
+            availability_b=environment_b.availability,
+            matches=None,
+            fingerprint_a=environment_a.fingerprint,
+            fingerprint_b=environment_b.fingerprint,
+            warning=f"Runtime environment comparison unavailable ({reasons}).",
+            differences=[],
+        )
+    fields_a = _environment_fields(result_a)
+    fields_b = _environment_fields(result_b)
+    differences = [
+        EnvironmentDifference(
+            field=name,
+            run_a=fields_a.get(name),
+            run_b=fields_b.get(name),
+        )
+        for name in sorted(fields_a.keys() | fields_b.keys())
+        if fields_a.get(name) != fields_b.get(name)
+    ]
+    matches = environment_a.fingerprint == environment_b.fingerprint
+    return EnvironmentComparison(
+        availability_a="available",
+        availability_b="available",
+        matches=matches,
+        fingerprint_a=environment_a.fingerprint,
+        fingerprint_b=environment_b.fingerprint,
+        warning=(
+            None if matches else "Runtime environments differ; result changes may not be task-only."
+        ),
+        differences=differences,
+    )
+
+
 def compare_runs(run_a: Path, run_b: Path) -> RunComparison:
     """Compare two immutable result files without depending on wall-clock state."""
     result_a, _, _ = load_run(run_a)
@@ -178,6 +256,9 @@ def compare_runs(run_a: Path, run_b: Path) -> RunComparison:
     }
     violations_a = set(result_a.violations)
     violations_b = set(result_b.violations)
+    environment = _compare_environments(result_a, result_b)
+    if environment.matches is False and environment.warning is not None:
+        warnings.append(environment.warning)
     timed_out_a = (
         result_a.execution.timed_out
         if result_a.execution is not None
@@ -216,6 +297,7 @@ def compare_runs(run_a: Path, run_b: Path) -> RunComparison:
         violations_added=sorted(violations_b - violations_a),
         violations_removed=sorted(violations_a - violations_b),
         test_cases=_compare_test_cases(result_a, result_b),
+        environment=environment,
     )
 
 
@@ -291,6 +373,19 @@ def render_comparison_terminal(comparison: RunComparison, console: Console) -> N
                 f"  - {duration_change.id}: {duration_change.run_a_seconds:.3f}s -> "
                 f"{duration_change.run_b_seconds:.3f}s "
                 f"({duration_change.delta_seconds:+.3f}s)"
+            )
+    if comparison.environment.warning and comparison.environment.matches is not False:
+        console.print(f"[yellow]{comparison.environment.warning}[/yellow]")
+    if comparison.environment.matches is True:
+        console.print(
+            f"Runtime environment: match ({(comparison.environment.fingerprint_a or '')[:12]})"
+        )
+    elif comparison.environment.matches is False:
+        console.print("[yellow]Runtime environment differences:[/yellow]")
+        for difference in comparison.environment.differences:
+            console.print(
+                f"  - {difference.field}: "
+                f"{difference.run_a or 'missing'} -> {difference.run_b or 'missing'}"
             )
 
 

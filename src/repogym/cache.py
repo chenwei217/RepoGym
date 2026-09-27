@@ -55,6 +55,7 @@ def build_cache_key(
     task_fingerprint: str,
     submission: Path,
     executor_identity: str,
+    environment_fingerprint: str | None = None,
 ) -> str:
     """Hash every task, input, command, runtime, and RepoGym compatibility input."""
     payload = {
@@ -64,6 +65,7 @@ def build_cache_key(
         "submission_files": file_manifest(submission),
         "command": resolve_command(task.execution.test_command),
         "executor": executor_identity,
+        "environment_fingerprint": environment_fingerprint,
         "environment": {
             "python_implementation": platform.python_implementation(),
             "python_version": platform.python_version(),

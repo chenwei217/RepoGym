@@ -32,6 +32,10 @@ aggregate contracts, counts, failures, errors, skips, duration, escaping, and em
 SARIF tests assert the 2.1.0 contract, stable rule and result ordering, relative locations, line
 numbers, empty results, deterministic serialization, and absolute-path redaction.
 
+Runtime-environment tests freeze platform and package providers to assert repeatable fingerprints,
+missing-dependency behavior, fingerprint validation, privacy exclusions, CLI terminal/JSON parity,
+persisted grading evidence, legacy availability, report rendering, and sorted comparison diffs.
+
 CLI contract tests assert the numeric exit-code enum, validation versus environment failures,
 execution and score outcomes, terminal/machine-format parity, unhandled filesystem errors,
 unexpected internal errors, and preservation of the framework's usage-error code.

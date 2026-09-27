@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import platform
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -101,21 +100,45 @@ def build_evidence(
                     "total": result.tests.total,
                 },
             ),
-            EvidenceRecord(
-                kind="environment",
-                source="python_runtime",
-                observed_at=observed_at,
-                status="info",
-                summary="Non-secret runtime identity",
-                task_id=result.task_id,
-                details={
-                    "implementation": platform.python_implementation(),
-                    "platform": platform.system().lower(),
-                    "python_version": platform.python_version(),
-                },
-            ),
         ]
     )
+    environment = result.environment
+    if environment.availability == "available" and environment.snapshot is not None:
+        snapshot = environment.snapshot
+        records.append(
+            EvidenceRecord(
+                kind="environment",
+                source="runtime_environment",
+                observed_at=observed_at,
+                status="info",
+                summary="Versioned non-secret runtime environment",
+                task_id=result.task_id,
+                details={
+                    "architecture": snapshot.architecture,
+                    "dependencies": json.dumps(snapshot.dependencies, sort_keys=True),
+                    "executor": snapshot.executor,
+                    "fingerprint": environment.fingerprint,
+                    "operating_system": snapshot.operating_system,
+                    "operating_system_release": snapshot.operating_system_release,
+                    "python_implementation": snapshot.python_implementation,
+                    "python_version": snapshot.python_version,
+                    "repogym_version": snapshot.repogym_version,
+                    "schema_version": environment.schema_version,
+                },
+            )
+        )
+    else:
+        records.append(
+            EvidenceRecord(
+                kind="environment",
+                source="runtime_environment",
+                observed_at=observed_at,
+                status="warning",
+                summary="Runtime environment unavailable",
+                task_id=result.task_id,
+                details={"availability": "unavailable", "reason": environment.reason},
+            )
+        )
     test_evidence = result.test_evidence
     if test_evidence.availability == "available":
         status_map: dict[

@@ -21,6 +21,7 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 | `repogym grade TASK --submission DIR [--no-cache]` | task and audited submission | candidate and tests on cache miss | `.repogym/runs/<id>/`, `.repogym/cache/` |
 | `repogym report RUN --format terminal\|json\|html\|junit\|sarif [--output FILE]` | run artifacts | no | optional output file |
 | `repogym compare RUN_A RUN_B --format terminal\|json [--output FILE]` | two run artifacts | no | optional output file |
+| `repogym environment [--format terminal\|json]` | current non-sensitive runtime facts | no | no |
 | `repogym bundle export TASK OUTPUT` | validated task directory | no | new ZIP task bundle |
 | `repogym bundle import BUNDLE --destination DIR` | ZIP task bundle | no | verified task directory |
 | `repogym cache list [--cache-dir PATH]` | cache manifests and artifacts | no | no |
@@ -34,7 +35,8 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 `doctor` separates PASS, WARN, and FAIL checks and never starts the configured test command.
 `compare` rejects different task IDs. Equal task IDs with unequal fingerprints produce a warning
 because the score delta may cross task versions. Terminal and JSON comparisons use the same
-deterministic comparison model.
+deterministic comparison model. Available runtime snapshots add equality, fingerprints, and sorted
+field differences; missing legacy snapshots remain explicitly unavailable.
 
 `report --format junit` emits deterministic collected pytest cases for CI test viewers and falls
 back to aggregate synthetic cases for old runs without that evidence. Terminal, JSON, and HTML

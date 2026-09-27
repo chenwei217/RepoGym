@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 from repogym.cache import ExecutionCache, build_cache_key
+from repogym.environment import collect_runtime_environment, executor_identity
 from repogym.evidence import build_evidence
 from repogym.exceptions import SecurityError, ValidationError
 from repogym.executors.base import CancellationToken, Executor
@@ -19,6 +20,7 @@ from repogym.models import (
     DimensionResult,
     ExecutionEvidence,
     GradeResult,
+    RuntimeEnvironmentEvidence,
     TaskSpec,
     TestCaseEvidence,
     TestCounts,
@@ -58,13 +60,6 @@ def _new_run_id() -> str:
     return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
 
 
-def _executor_cache_identity(executor: Executor) -> str:
-    kind = f"{type(executor).__module__}.{type(executor).__qualname__}"
-    if isinstance(executor, LocalExecutor):
-        return f"{kind}:stdout={executor.max_stdout_bytes}:stderr={executor.max_stderr_bytes}"
-    return kind
-
-
 def grade_submission(
     task_directory: Path,
     submission: Path,
@@ -84,6 +79,7 @@ def grade_submission(
         raise SecurityError("Submission audit failed:\n  - " + "\n  - ".join(audit.violations))
     fingerprint = task_fingerprint(task_directory, task)
     runner = executor or LocalExecutor()
+    runtime_environment = collect_runtime_environment(runner)
     if cache_root is None:
         return _grade_validated(
             task_directory,
@@ -94,8 +90,15 @@ def grade_submission(
             task,
             fingerprint,
             _new_run_id(),
+            runtime_environment,
         )
-    key = build_cache_key(task, fingerprint, submission, _executor_cache_identity(runner))
+    key = build_cache_key(
+        task,
+        fingerprint,
+        submission,
+        executor_identity(runner),
+        runtime_environment.fingerprint,
+    )
     cache = ExecutionCache(cache_root)
     lock_timeout = max(30, task.execution.timeout_seconds * 3 + 30)
     with cache.lock(key, timeout_seconds=lock_timeout):
@@ -112,6 +115,7 @@ def grade_submission(
             task,
             fingerprint,
             run_id,
+            runtime_environment,
             key,
         )
         persisted = GradeResult.model_validate_json(
@@ -131,6 +135,7 @@ def _grade_validated(
     task: TaskSpec,
     fingerprint: str,
     run_id: str,
+    runtime_environment: RuntimeEnvironmentEvidence,
     cache_key: str | None = None,
 ) -> Path:
     run_dir = output_root.resolve() / run_id
@@ -227,6 +232,7 @@ def _grade_validated(
                 if all_result.test_evidence is not None
                 else TestCaseEvidence.unavailable("collector_unavailable")
             ),
+            environment=runtime_environment,
         )
         safe_stdout = redact_known_paths(all_result.stdout, sensitive_roots)
         safe_stderr = redact_known_paths(all_result.stderr, sensitive_roots)
@@ -246,6 +252,7 @@ def _grade_validated(
             "return_code": all_result.return_code,
             "timed_out": all_result.timed_out,
             "execution": evidence.model_dump(mode="json"),
+            "environment": runtime_environment.model_dump(mode="json"),
         }
         if cache_evidence is not None:
             metadata["cache"] = cache_evidence.model_dump(mode="json")

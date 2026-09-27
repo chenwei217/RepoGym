@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import traceback
 from pathlib import Path
 from typing import Annotated, Literal
@@ -20,6 +21,7 @@ from repogym.bundles import export_task_bundle, import_task_bundle
 from repogym.cache import ExecutionCache
 from repogym.comparison import generate_comparison
 from repogym.doctor import diagnose_task
+from repogym.environment import collect_runtime_environment, render_environment_terminal
 from repogym.exceptions import BatchError, CacheError, ExecutionError, RepoGymError
 from repogym.exit_codes import ExitCode
 from repogym.grader import grade_submission
@@ -205,7 +207,7 @@ def report(
     except RepoGymError as exc:
         _fail(exc, ExitCode.ENVIRONMENT_ERROR)
     if rendered is not None and output is None:
-        console.print(rendered, markup=False)
+        console.print(rendered, markup=False, soft_wrap=True)
     elif output is not None:
         console.print(f"Report written to {escape(redact_sensitive_text(str(output)))}")
 
@@ -225,7 +227,7 @@ def compare(
     except RepoGymError as exc:
         _fail(exc, ExitCode.ENVIRONMENT_ERROR)
     if rendered is not None and output is None:
-        console.print(rendered, markup=False)
+        console.print(rendered, markup=False, soft_wrap=True)
     elif output is not None:
         console.print(f"Comparison written to {escape(redact_sensitive_text(str(output)))}")
 
@@ -386,6 +388,30 @@ def report_batch_command(
 def version() -> None:
     """Show the installed RepoGym version."""
     console.print(__version__)
+
+
+@app.command("environment")
+def environment_command(
+    format_name: Annotated[
+        Literal["terminal", "json"],
+        typer.Option("--format", help="Environment output format."),
+    ] = "terminal",
+) -> None:
+    """Show the non-sensitive runtime snapshot used by new grading runs."""
+    environment = collect_runtime_environment()
+    if format_name == "json":
+        console.print(
+            json.dumps(
+                environment.model_dump(mode="json"),
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            ),
+            markup=False,
+            soft_wrap=True,
+        )
+    else:
+        render_environment_terminal(environment, console)
 
 
 @app.command()

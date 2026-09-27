@@ -58,6 +58,15 @@ def render_terminal(result: GradeResult, console: Console) -> None:
     if result.cache is not None:
         state = "hit" if result.cache.hit else "miss"
         console.print(f"Cache: {state} ({result.cache.key[:12]})")
+    if result.environment.availability == "available":
+        executor = (
+            result.environment.snapshot.executor
+            if result.environment.snapshot is not None
+            else "unknown"
+        )
+        console.print(f"Environment: {(result.environment.fingerprint or '')[:12]} ({executor})")
+    else:
+        console.print(f"Environment: unavailable ({result.environment.reason})")
     if result.violations:
         console.print("[yellow]Violations:[/yellow]")
         for violation in result.violations:

@@ -89,7 +89,9 @@ cancelled result and does not launch remaining test or quality commands.
 
 `result.json` records the task fingerprint plus sanitized argv, exit code, timeout state,
 duration, `<WORKSPACE>` working directory, output filenames, termination diagnostics, and the
-test-statistics source. Output evidence includes original byte counts and per-stream truncation
+test-statistics source. It also embeds environment schema v1, collected once before execution,
+with a canonical digest over an allowlisted Python/OS/dependency/tool/executor snapshot. Output
+evidence includes original byte counts and per-stream truncation
 flags. The executor retains bounded beginnings and endings while continuously draining the child
 pipes, preventing pipe deadlocks and unbounded capture memory without losing the final pytest
 summary. `metadata.json` contains the same structured evidence with creation time and schema
@@ -108,9 +110,10 @@ SARIF defensively redacts violation strings again when called directly.
 output-artifact records. Each record carries its task, source, observation time, status, summary,
 and typed details. Ordering uses kind, source, and summary rather than insertion order. Runtime
 evidence is restricted to Python implementation/version and OS family; failure summaries are
-bounded and credential/path-redacted, and raw JUnit captured output is not persisted. Schema-1
-documents migrate in memory. Runs without the file are adapted from their existing result,
-metadata, and output artifacts.
+bounded and credential/path-redacted, and raw JUnit captured output is not persisted. Environment
+records consume the persisted run snapshot; they never inspect the machine loading an old
+artifact. Schema-1 documents migrate in memory. Runs without the file are adapted from their
+existing result, metadata, and output artifacts.
 
 The fingerprint incorporates length-prefixed normalized relative paths and file bytes in lexical
 path order. Required inputs are `task.yaml`, prompt/description, `starter/`, public tests, private

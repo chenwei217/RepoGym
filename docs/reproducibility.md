@@ -18,6 +18,19 @@ and stores the fingerprint alongside structured execution evidence. A generic `p
 ambient `PATH` entry from changing the evaluator runtime. Reports redact local paths before they
 are persisted or rendered.
 
+## Runtime environment identity
+
+Environment schema version 1 is a fixed, non-sensitive compatibility surface: Python
+implementation/version, OS family/release, architecture, RepoGym version, direct runtime
+dependency versions, and executor identity. Canonical sorted JSON produces the SHA-256 environment
+fingerprint. Repeated collection with the same inputs is stable, while Python, platform,
+dependency, tool, or executor changes are readable field-level differences in `compare`.
+
+The collector never reads environment variable values, executable or home paths, usernames,
+hostnames, process IDs, or arbitrary installed distributions. New grades store the snapshot in
+`result.json`, `metadata.json`, and `evidence.json`. Old artifacts use `legacy_run`; loaders
+must not describe a historical run using the current reader's environment.
+
 Package format version 1 makes the same input surface portable. Its sorted manifest records the
 task ID and version, task fingerprint, exporter environment summary, and each file's normalized
 path, byte length, and SHA-256 digest. ZIP timestamps and permissions are fixed, so repeated

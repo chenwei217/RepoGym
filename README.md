@@ -13,6 +13,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - Public and private pytest suites with reference-solution verification
 - SHA-256 task fingerprints over every versioned task input, including the reference patch
 - Environment diagnostics for commands, dependencies, working directories, and test discovery
+- Versioned, privacy-preserving runtime environment snapshots and fingerprints
 - Temporary workspaces and a replaceable executor interface
 - Generic `python` task commands are bound to the interpreter running RepoGym
 - Deterministic correctness, regression, static-quality, and scope scores
@@ -73,6 +74,7 @@ pytest --cov=repogym --cov-report=term-missing
 | `repogym list [--tasks-dir PATH]` | Discover valid task definitions |
 | `repogym validate TASK` | Check metadata, paths, and required files |
 | `repogym doctor TASK` | Diagnose the local execution environment |
+| `repogym environment [--format terminal\|json]` | Show the runtime snapshot used by new grades |
 | `repogym verify TASK` | Prove the starter fails and the reference fix passes |
 | `repogym grade TASK --submission DIR [--no-cache]` | Grade a candidate with incremental caching |
 | `repogym report RUN --format terminal\|json\|html\|junit\|sarif [--output FILE]` | Re-render saved run artifacts |
@@ -179,7 +181,10 @@ Violations added: 0; removed: 0
 
 Use `--format json` and optionally `--output FILE` for automation. Comparisons read immutable
 run artifacts and never re-run candidate code. A task-ID mismatch is an error; a fingerprint
-mismatch is a prominent comparability warning.
+mismatch is a prominent comparability warning. If both artifacts have runtime snapshots,
+`compare` also reports whether they match and lists Python, OS, dependency, RepoGym, or executor
+differences. Old artifacts say that environment comparison is unavailable instead of using the
+reader's current machine.
 
 ## Task specification
 
@@ -307,6 +312,13 @@ executed command, aggregate statistics, individual pytest cases, non-secret runt
 sanitized output artifacts. Every record has a source, observation time, status, summary, and
 task association; records are sorted by stable semantic keys. Schema-1 documents migrate in
 memory, and older result files expose an explicit `legacy_run` per-test availability state.
+
+`repogym environment --format json` prints environment schema version 1: Python implementation
+and version, OS family/release and architecture, RepoGym version, the fixed direct-dependency
+allowlist, executor identity, and a canonical SHA-256 fingerprint. It deliberately excludes
+executable paths, environment variables, usernames, hostnames, process IDs, and arbitrary package
+inventories. The same object is persisted in new result and metadata files and rendered in
+terminal and HTML reports.
 
 Detailed workflows: [CLI reference](docs/cli.md),
 [reproducibility](docs/reproducibility.md), [run comparison](docs/run-comparison.md),

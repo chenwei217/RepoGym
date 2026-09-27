@@ -26,6 +26,7 @@ Changelog, and versions follow Semantic Versioning.
 - Reproducibility and run-comparison workflow documentation
 - Versioned task bundle export and integrity-checked atomic import
 - Versioned per-test pytest evidence with stable IDs, detailed reports, and regression comparison
+- Comparable versioned runtime environments in grading, reports, CLI, cache keys, and comparisons
 
 ### Changed
 

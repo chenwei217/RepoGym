@@ -36,6 +36,8 @@ secrets, restricted networking, and a dedicated unprivileged identity.
   including JUnit and SARIF; SARIF also re-redacts direct serializer input;
 - pytest case evidence retains only stable IDs, status, duration, bounded sanitized failure
   summaries, and references to sanitized aggregate output; raw JUnit `system-out` is discarded;
+- runtime snapshots use a fixed dependency allowlist and exclude environment variables,
+  executable/home paths, usernames, hostnames, process IDs, and arbitrary package names;
 - task bundle import rejects Zip Slip paths, links, name collisions, undeclared or oversized
   members, and integrity mismatches before atomically publishing a validated task;
 - execution cache entries contain only already-sanitized run artifacts plus hashes, reject links

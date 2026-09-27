@@ -27,6 +27,17 @@
   {% for case in result.test_evidence.cases %}<tr><td>{{ case.id }}</td><td>{{ case.status }}</td><td>{{ "%.3f"|format(case.duration_seconds) }}s</td><td>{{ case.failure_summary or "" }}</td></tr>{% endfor %}
   </tbody></table>
   {% else %}<p>Unavailable ({{ result.test_evidence.reason }}).</p>{% endif %}
+  <h2>Runtime environment</h2>
+  {% if result.environment.availability == "available" and result.environment.snapshot %}
+  <p>Fingerprint: <code>{{ result.environment.fingerprint }}</code></p>
+  <table><tbody>
+    <tr><th>Python</th><td>{{ result.environment.snapshot.python_implementation }} {{ result.environment.snapshot.python_version }}</td></tr>
+    <tr><th>Operating system</th><td>{{ result.environment.snapshot.operating_system }} {{ result.environment.snapshot.operating_system_release }} ({{ result.environment.snapshot.architecture }})</td></tr>
+    <tr><th>RepoGym</th><td>{{ result.environment.snapshot.repogym_version }}</td></tr>
+    <tr><th>Executor</th><td>{{ result.environment.snapshot.executor }}</td></tr>
+    {% for name, version in result.environment.snapshot.dependencies.items() %}<tr><th>{{ name }}</th><td>{{ version }}</td></tr>{% endfor %}
+  </tbody></table>
+  {% else %}<p>Unavailable ({{ result.environment.reason }}).</p>{% endif %}
   <h2>Violations</h2>
   {% if result.violations %}<ul>{% for violation in result.violations %}<li class="violation">{{ violation }}</li>{% endfor %}</ul>{% else %}<p>None.</p>{% endif %}
   <details><summary>stdout</summary><pre>{{ stdout }}</pre></details>
