@@ -47,3 +47,7 @@ class PluginError(RepoGymError):
 
 class BatchError(RepoGymError):
     """Raised when a batch manifest or persisted batch result is invalid."""
+
+
+class AuthoringError(RepoGymError):
+    """Raised when task scaffolding or author diagnostics cannot be completed."""

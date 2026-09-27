@@ -21,3 +21,4 @@ feature documentation.
 - [0010: Deterministic batch evaluation](0010-deterministic-batch-evaluation.md)
 - [0011: Per-test execution evidence](0011-per-test-execution-evidence.md)
 - [0012: Comparable runtime environments](0012-comparable-runtime-environments.md)
+- [0013: Atomic task scaffolding and author lint](0013-task-authoring-workflow.md)

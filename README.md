@@ -14,6 +14,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - SHA-256 task fingerprints over every versioned task input, including the reference patch
 - Environment diagnostics for commands, dependencies, working directories, and test discovery
 - Versioned, privacy-preserving runtime environment snapshots and fingerprints
+- Atomic interactive/non-interactive task scaffolding with author-focused lint diagnostics
 - Temporary workspaces and a replaceable executor interface
 - Generic `python` task commands are bound to the interpreter running RepoGym
 - Deterministic correctness, regression, static-quality, and scope scores
@@ -73,6 +74,8 @@ pytest --cov=repogym --cov-report=term-missing
 | --- | --- |
 | `repogym list [--tasks-dir PATH]` | Discover valid task definitions |
 | `repogym validate TASK` | Check metadata, paths, and required files |
+| `repogym init-task [TASK_ID] [--title TITLE] [--non-interactive]` | Scaffold a validated task |
+| `repogym lint-task TASK` | Diagnose author completeness and reproducibility risks |
 | `repogym doctor TASK` | Diagnose the local execution environment |
 | `repogym environment [--format terminal\|json]` | Show the runtime snapshot used by new grades |
 | `repogym verify TASK` | Prove the starter fails and the reference fix passes |

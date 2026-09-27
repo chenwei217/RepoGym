@@ -36,6 +36,11 @@ Runtime-environment tests freeze platform and package providers to assert repeat
 missing-dependency behavior, fingerprint validation, privacy exclusions, CLI terminal/JSON parity,
 persisted grading evidence, legacy availability, report rendering, and sorted comparison diffs.
 
+Authoring tests cover interactive and non-interactive scaffolding, paths containing spaces,
+immediate structural validation, invalid IDs and traversal attempts, duplicate protection,
+validation-failure cleanup, placeholder and empty content, conflicting counts, risky commands,
+stable CLI exit codes, and compatibility with both bundled tasks.
+
 CLI contract tests assert the numeric exit-code enum, validation versus environment failures,
 execution and score outcomes, terminal/machine-format parity, unhandled filesystem errors,
 unexpected internal errors, and preservation of the framework's usage-error code.

@@ -19,6 +19,8 @@ secrets, restricted networking, and a dedicated unprivileged identity.
 ## Defensive controls
 
 - task paths must be relative and cannot contain `..` or absolute/drive-qualified paths;
+- task scaffolding restricts IDs to lowercase hyphenated names, refuses existing targets, and
+  validates in a same-filesystem staging tree before atomic publication;
 - submission preflight rejects links, detectable reparse points, special files, oversized files,
   sensitive filenames, case-conflicting paths, and files outside the declared allowed scope;
 - starter, test, and accepted submission copies re-check links and special files while copying;

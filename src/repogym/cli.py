@@ -16,13 +16,14 @@ from typer._click.exceptions import ClickException
 from typer.core import TyperGroup
 
 from repogym import __version__
+from repogym.authoring import lint_task, scaffold_task
 from repogym.batch import generate_batch_report, load_batch, run_batch
 from repogym.bundles import export_task_bundle, import_task_bundle
 from repogym.cache import ExecutionCache
 from repogym.comparison import generate_comparison
 from repogym.doctor import diagnose_task
 from repogym.environment import collect_runtime_environment, render_environment_terminal
-from repogym.exceptions import BatchError, CacheError, ExecutionError, RepoGymError
+from repogym.exceptions import AuthoringError, BatchError, CacheError, ExecutionError, RepoGymError
 from repogym.exit_codes import ExitCode
 from repogym.grader import grade_submission
 from repogym.loader import load_task
@@ -118,6 +119,75 @@ def validate(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> N
             error_console.print(f"[red]FAIL[/red] {escape(redact_sensitive_text(error, [task]))}")
         raise typer.Exit(int(ExitCode.TASK_INVALID))
     console.print("\n[bold green]Validation passed.[/bold green]")
+
+
+def _render_authoring_report(task: Path) -> tuple[bool, int]:
+    report = lint_task(task)
+    for check in report.validation.checks:
+        console.print(f"[green]PASS[/green] {check}")
+    for error in report.validation.errors:
+        error_console.print(f"[red]FAIL[/red] {escape(redact_sensitive_text(error, [task]))}")
+    for diagnostic in report.diagnostics:
+        label = "FAIL" if diagnostic.status == "error" else "WARN"
+        style = "red" if diagnostic.status == "error" else "yellow"
+        stream = error_console if diagnostic.status == "error" else console
+        stream.print(f"[{style}]{label}[/] ({diagnostic.code}) {escape(diagnostic.message)}")
+    warnings = sum(item.status == "warning" for item in report.diagnostics)
+    return report.valid, warnings
+
+
+@app.command("init-task")
+def init_task(
+    task_id: Annotated[
+        str | None,
+        typer.Argument(help="Lowercase hyphenated task ID."),
+    ] = None,
+    title: Annotated[
+        str | None,
+        typer.Option("--title", help="Human-readable task title."),
+    ] = None,
+    tasks_dir: Annotated[
+        Path,
+        typer.Option("--tasks-dir", help="Parent directory for task definitions."),
+    ] = Path("tasks"),
+    non_interactive: Annotated[
+        bool,
+        typer.Option("--non-interactive", help="Reject missing values instead of prompting."),
+    ] = False,
+) -> None:
+    """Create an atomically published, structurally valid task template."""
+    if non_interactive and (task_id is None or title is None):
+        _fail(
+            AuthoringError("--non-interactive requires TASK_ID and --title"),
+            ExitCode.TASK_INVALID,
+        )
+    resolved_id = task_id or typer.prompt("Task ID")
+    resolved_title = title or typer.prompt("Task title")
+    try:
+        task = scaffold_task(tasks_dir, resolved_id, resolved_title)
+    except AuthoringError as exc:
+        _fail(exc, ExitCode.TASK_INVALID)
+    displayed = redact_sensitive_text(str(task), [Path.cwd()])
+    console.print(f"[green]Created[/green] {escape(displayed)}")
+    _render_authoring_report(task)
+    console.print("Replace the TODO prompt, tests, and reference patch before verification.")
+
+
+@app.command("lint-task")
+def lint_task_command(
+    task: Annotated[Path, typer.Argument(help="Task directory.")],
+) -> None:
+    """Check author completeness and reproducibility risks."""
+    try:
+        valid, warnings = _render_authoring_report(task)
+    except AuthoringError as exc:
+        _fail(exc, ExitCode.TASK_INVALID)
+    if not valid:
+        raise typer.Exit(int(ExitCode.TASK_INVALID))
+    if warnings:
+        console.print(f"\n[bold yellow]Author lint completed with {warnings} warning(s).[/]")
+    else:
+        console.print("\n[bold green]Author lint passed.[/bold green]")
 
 
 @app.command()

@@ -36,14 +36,28 @@ fails for the intended reason before the fix, not because it cannot import or in
 
 ## Authoring loop
 
-1. Create `task.yaml`, `prompt.md`, `starter/`, both test directories, and
-   `reference/solution.patch`.
-2. Run `repogym validate tasks/<id>` to catch schema, path, and layout errors.
-3. Run `repogym doctor tasks/<id>` to check the command, dependencies, discovery, temporary
+1. Run `repogym init-task <id> --title "Title"` to atomically create `task.yaml`,
+   `prompt.md`, `starter/`, both test directories, and `reference/solution.patch`. For
+   scripts, add `--non-interactive`; this requires both the ID and title. Without it, missing
+   values are prompted.
+2. Replace every TODO with the real contract, public/private assertions, starter behavior, and
+   unified reference patch. The generated tree is structurally valid, not a finished benchmark.
+3. Run `repogym lint-task tasks/<id>` for author-focused completeness and reproducibility
+   diagnostics, then `repogym validate tasks/<id>` for the machine contract.
+4. Run `repogym doctor tasks/<id>` to check the command, dependencies, discovery, temporary
    storage, and deterministic fingerprint without executing candidate code.
-4. Run `repogym verify tasks/<id>` to execute the starter, apply the patch, and execute again.
-5. Grade both a known-correct and a deliberately incomplete submission.
-6. Compare those runs and confirm every deduction is explainable from the published rules.
+5. Run `repogym verify tasks/<id>` to execute the starter, apply the patch, and execute again.
+6. Grade both a known-correct and a deliberately incomplete submission.
+7. Compare those runs and confirm every deduction is explainable from the published rules.
+
+`init-task` accepts only lowercase hyphenated IDs and never overwrites an existing directory.
+It validates in a same-filesystem staging directory and publishes by atomic rename, so a failed
+write or validation cannot leave a half-created task. Use `--tasks-dir PATH` to select a parent.
+
+`lint-task` retains all ordinary validation errors and adds stable codes for empty or placeholder
+content, expected/discovered test-count conflicts, shell-mediated or absolute commands, early-stop
+pytest options, and an unrestricted allowed-path pattern. Warnings do not change the exit code;
+errors return the standard invalid-task code 10.
 
 Use regression tests for behavior that should remain stable and edge tests for equality
 boundaries, empty inputs, replacement, deletion, and nested mutable data. Do not assert a

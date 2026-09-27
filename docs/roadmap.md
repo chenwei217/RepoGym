@@ -26,7 +26,6 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 | Priority | Need | Acceptance criteria | Likely modules |
 | --- | --- | --- | --- |
 | P1 | Sandboxed execution backend | A separately configured backend enforces filesystem, network, CPU, memory, and process limits without weakening the local executor contract. | `executors`, `plugins`, deployment docs |
-| P2 | Task authoring workflow | Scaffold minimal valid tasks and lint author-facing completeness and reproducibility risks. | `cli`, `validator`, `authoring` |
 
 ## Completed roadmap items
 
@@ -57,6 +56,9 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 - Environment schema v1 persists a fixed non-sensitive runtime allowlist and canonical digest.
   CLI and reports render it, cache keys include it, and comparison explains sorted differences
   without substituting the reader's environment for legacy runs.
+- Task scaffolding validates in a same-filesystem staging tree before atomic publication;
+  interactive/non-interactive CLI paths and coded author lint cover placeholders, incomplete
+  counts, risky commands, broad scope, duplicate targets, and path traversal.
 
 ## Test gaps
 
@@ -71,5 +73,4 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 ## Delivery order
 
-A separately configured sandboxed backend is the next security priority. Task-authoring
-diagnostics are the next reproducibility priority.
+A separately configured sandboxed backend is the next security priority.

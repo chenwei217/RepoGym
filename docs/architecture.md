@@ -4,6 +4,8 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
 
 1. `loader` migrates versioned task mappings and parses them into strict Pydantic models.
 2. `validator` checks layout, safe relative paths, test discovery, and constraint overlap.
+   `authoring` builds tasks in same-filesystem staging directories, validates before atomic
+   publication, and layers author completeness/reproducibility diagnostics over the validator.
 3. `doctor` inspects the local Python runtime, command, dependencies, working directory, and
    discovered tests without executing candidate code. It uses the same resolved command as the
    execution path and reports the executable it actually checked.

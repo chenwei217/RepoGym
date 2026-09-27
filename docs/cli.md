@@ -16,6 +16,8 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 | --- | --- | --- | --- |
 | `repogym list [--tasks-dir PATH]` | task metadata | no | no |
 | `repogym validate TASK` | task metadata and tests | no | no |
+| `repogym init-task [TASK_ID] [--title TITLE] [--tasks-dir DIR] [--non-interactive]` | author values | no | new validated task directory |
+| `repogym lint-task TASK` | task metadata and author content | no | no |
 | `repogym doctor TASK` | task metadata and filesystem metadata | no | temporary probe only |
 | `repogym verify TASK` | complete task | starter and reference | temporary workspace only |
 | `repogym grade TASK --submission DIR [--no-cache]` | task and audited submission | candidate and tests on cache miss | `.repogym/runs/<id>/`, `.repogym/cache/` |
@@ -33,6 +35,9 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 | `repogym version` | package metadata | no | no |
 
 `doctor` separates PASS, WARN, and FAIL checks and never starts the configured test command.
+`init-task` prompts for omitted ID/title unless `--non-interactive` is set, validates a staged
+tree, refuses existing targets, and publishes atomically. `lint-task` reports coded author
+warnings and returns invalid-task code 10 only for validation or authoring errors.
 `compare` rejects different task IDs. Equal task IDs with unequal fingerprints produce a warning
 because the score delta may cross task versions. Terminal and JSON comparisons use the same
 deterministic comparison model. Available runtime snapshots add equality, fingerprints, and sorted
