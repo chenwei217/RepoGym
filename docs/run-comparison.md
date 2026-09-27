@@ -2,7 +2,11 @@
 
 `repogym compare RUN_A RUN_B` loads existing artifacts and never executes candidate or task code.
 It reports B minus A for total score, each dimension, passed/failed/total tests, and duration. It
-also compares status, timeout state, and added or removed violations.
+also compares status, timeout state, and added or removed violations. If both artifacts contain
+structured pytest evidence, comparison lists newly failing cases, failures restored to passing,
+and shared cases whose duration changed by at least 0.1 seconds and 50 percent. Case lists are
+sorted by stable ID. Legacy, timeout, cancelled, non-pytest, or malformed-output runs carry an
+explicit reason instead of pretending a case-level comparison is complete.
 
 ```bash
 repogym compare .repogym/runs/<a> .repogym/runs/<b>

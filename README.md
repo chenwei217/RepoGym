@@ -22,6 +22,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - Bounded process output, process-tree timeout cleanup, and unified path redaction
 - Cooperative cancellation with the same cross-platform process-tree cleanup as timeouts
 - Versioned command, test, environment, and artifact evidence in deterministic order
+- Stable per-test identities, outcomes, durations, and regression comparison for pytest runs
 - Atomic content-addressed execution caching with corruption recovery and per-key locking
 - Versioned, failure-isolated plugin contracts for loaders, executors, and reporters
 - Deterministic multi-task evaluation with replayable terminal, JSON, JUnit, and SARIF summaries
@@ -159,7 +160,9 @@ left unchanged. Commands are always passed as argument lists with `shell=False`.
 ## Comparing runs
 
 `compare` reports B minus A for the total score, every scoring dimension, passed/failed/total
-tests, duration, status, timeout state, and violations. For the bundled broken and fixed cache
+tests, duration, status, timeout state, and violations. When both runs contain structured pytest
+evidence it also lists newly failing tests, tests restored to passing, and shared tests whose
+duration changed by at least 0.1 seconds and 50 percent. For the bundled broken and fixed cache
 submissions, an actual local run produced:
 
 ```text
@@ -237,17 +240,18 @@ changed. See [Scoring](docs/scoring.md) for edge cases and exact formulas.
 ## HTML report
 
 The HTML renderer emits one portable file with no CDN dependency. It contains the overall
-score, every scoring dimension, test statistics, violations, duration, and collapsed process
-output. Untrusted output is HTML-escaped and local absolute paths are redacted first.
+score, every scoring dimension, aggregate and per-test statistics, violations, duration, and
+collapsed process output. Untrusted output is HTML-escaped and local absolute paths are redacted
+first.
 
 ## Machine reports
 
-Use `--format junit` to export aggregate test outcomes for CI test viewers. The suite carries the
-recorded total, failure, derived skipped, and duration values, with deterministic synthetic case
-names because RepoGym currently persists aggregate rather than per-test results. Use `--format
-sarif` to export scope violations for code-scanning tools; known relative paths and line suffixes
-become SARIF physical locations. Both formats are deterministic and reuse the run loader's path
-redaction. Pass `--output report.xml` or `--output report.sarif` to write a file.
+Use `--format junit` to export the collected pytest case IDs, statuses, and durations for CI test
+viewers. Older runs without per-test evidence retain the aggregate compatibility representation
+with deterministic synthetic names. Use `--format sarif` to export scope violations for
+code-scanning tools; known relative paths and line suffixes become SARIF physical locations. Both
+formats are deterministic and reuse the run loader's path redaction. Pass `--output report.xml`
+or `--output report.sarif` to write a file.
 
 ## Architecture
 
@@ -298,11 +302,11 @@ callers can set independent positive limits. The same redaction policy is applie
 output, JSON, terminal, HTML, and comparisons; environment variables and tokens are never
 recorded automatically.
 
-Each new run also writes `evidence.json` using evidence schema version 1. Its records cover the
-executed command, parsed test statistics, non-secret runtime identity, and sanitized output
-artifacts. Every record has a source, observation time, status, summary, and task association;
-records are sorted by stable semantic keys. The loader synthesizes equivalent v1 evidence for
-older runs that predate this file.
+Each new run also writes `evidence.json` using evidence schema version 2. Its records cover the
+executed command, aggregate statistics, individual pytest cases, non-secret runtime identity, and
+sanitized output artifacts. Every record has a source, observation time, status, summary, and
+task association; records are sorted by stable semantic keys. Schema-1 documents migrate in
+memory, and older result files expose an explicit `legacy_run` per-test availability state.
 
 Detailed workflows: [CLI reference](docs/cli.md),
 [reproducibility](docs/reproducibility.md), [run comparison](docs/run-comparison.md),

@@ -58,13 +58,22 @@ def test_evidence_round_trip_is_versioned_and_deterministically_sorted() -> None
 
 def test_evidence_rejects_unknown_schema_and_fields() -> None:
     raw = build_evidence(sample_result(), datetime.now(UTC), "", "").model_dump(mode="json")
-    raw["schema_version"] = 2
+    raw["schema_version"] = 3
     with pytest.raises(ValueError):
         EvidenceDocument.model_validate(raw)
     raw["schema_version"] = 1
     raw["unexpected"] = True
     with pytest.raises(ValueError):
         EvidenceDocument.model_validate(raw)
+
+
+def test_evidence_migrates_schema_one_in_memory() -> None:
+    raw = build_evidence(sample_result(), datetime.now(UTC), "", "").model_dump(mode="json")
+    raw["schema_version"] = 1
+
+    migrated = EvidenceDocument.model_validate(raw)
+
+    assert migrated.schema_version == EVIDENCE_SCHEMA_VERSION
 
 
 def test_grade_writes_sanitized_evidence_and_legacy_runs_are_synthesized(tmp_path: Path) -> None:

@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.table import Table
 
 from repogym.exceptions import ReportError
+from repogym.models import GradeResult
 from repogym.reports import load_run
 
 
@@ -39,6 +40,29 @@ class TimeoutComparison(BaseModel):
     changed: bool
 
 
+class TestCaseStateChange(BaseModel):
+    id: str
+    run_a: str | None
+    run_b: str | None
+
+
+class TestCaseDurationChange(BaseModel):
+    id: str
+    run_a_seconds: float
+    run_b_seconds: float
+    delta_seconds: float
+    percent_change: float
+
+
+class TestCaseComparison(BaseModel):
+    availability_a: str
+    availability_b: str
+    warning: str | None = None
+    newly_failing: list[TestCaseStateChange]
+    restored_to_passing: list[TestCaseStateChange]
+    duration_changes: list[TestCaseDurationChange]
+
+
 class RunComparison(BaseModel):
     run_a: str
     run_b: str
@@ -54,6 +78,7 @@ class RunComparison(BaseModel):
     timed_out: TimeoutComparison
     violations_added: list[str]
     violations_removed: list[str]
+    test_cases: TestCaseComparison
 
 
 def _metric(value_a: float, value_b: float, digits: int = 2) -> MetricComparison:
@@ -61,6 +86,68 @@ def _metric(value_a: float, value_b: float, digits: int = 2) -> MetricComparison
         run_a=round(value_a, digits),
         run_b=round(value_b, digits),
         delta=round(value_b - value_a, digits),
+    )
+
+
+def _compare_test_cases(result_a: GradeResult, result_b: GradeResult) -> TestCaseComparison:
+    evidence_a = result_a.test_evidence
+    evidence_b = result_b.test_evidence
+    if evidence_a.availability != "available" or evidence_b.availability != "available":
+        reasons = f"A={evidence_a.reason}, B={evidence_b.reason}"
+        return TestCaseComparison(
+            availability_a=evidence_a.availability,
+            availability_b=evidence_b.availability,
+            warning=f"Per-test comparison unavailable ({reasons}).",
+            newly_failing=[],
+            restored_to_passing=[],
+            duration_changes=[],
+        )
+    cases_a = {case.id: case for case in evidence_a.cases}
+    cases_b = {case.id: case for case in evidence_b.cases}
+    failing = {"failed", "error"}
+    newly_failing = [
+        TestCaseStateChange(
+            id=case_id,
+            run_a=cases_a[case_id].status if case_id in cases_a else None,
+            run_b=cases_b[case_id].status,
+        )
+        for case_id in sorted(cases_b)
+        if cases_b[case_id].status in failing
+        and (case_id not in cases_a or cases_a[case_id].status not in failing)
+    ]
+    restored = [
+        TestCaseStateChange(
+            id=case_id,
+            run_a=cases_a[case_id].status,
+            run_b=cases_b[case_id].status if case_id in cases_b else None,
+        )
+        for case_id in sorted(cases_a)
+        if cases_a[case_id].status in failing
+        and case_id in cases_b
+        and cases_b[case_id].status == "passed"
+    ]
+    durations: list[TestCaseDurationChange] = []
+    for case_id in sorted(cases_a.keys() & cases_b.keys()):
+        before = cases_a[case_id].duration_seconds
+        after = cases_b[case_id].duration_seconds
+        delta = after - before
+        percent = delta / before * 100 if before > 0 else float("inf")
+        if abs(delta) >= 0.1 and (before == 0 or abs(percent) >= 50):
+            durations.append(
+                TestCaseDurationChange(
+                    id=case_id,
+                    run_a_seconds=round(before, 6),
+                    run_b_seconds=round(after, 6),
+                    delta_seconds=round(delta, 6),
+                    percent_change=round(percent, 2) if before > 0 else 100.0,
+                )
+            )
+    return TestCaseComparison(
+        availability_a="available",
+        availability_b="available",
+        newly_failing=newly_failing,
+        restored_to_passing=restored,
+        duration_changes=durations,
     )
 
 
@@ -128,6 +215,7 @@ def compare_runs(run_a: Path, run_b: Path) -> RunComparison:
         ),
         violations_added=sorted(violations_b - violations_a),
         violations_removed=sorted(violations_a - violations_b),
+        test_cases=_compare_test_cases(result_a, result_b),
     )
 
 
@@ -186,6 +274,24 @@ def render_comparison_terminal(comparison: RunComparison, console: Console) -> N
         console.print(f"  [red]+ {violation}[/red]")
     for violation in comparison.violations_removed:
         console.print(f"  [green]- {violation}[/green]")
+    if comparison.test_cases.warning:
+        console.print(f"[yellow]{comparison.test_cases.warning}[/yellow]")
+    if comparison.test_cases.newly_failing:
+        console.print("[red]Newly failing tests:[/red]")
+        for change in comparison.test_cases.newly_failing:
+            console.print(f"  - {change.id}: {change.run_a or 'missing'} -> {change.run_b}")
+    if comparison.test_cases.restored_to_passing:
+        console.print("[green]Tests restored to passing:[/green]")
+        for change in comparison.test_cases.restored_to_passing:
+            console.print(f"  - {change.id}: {change.run_a} -> {change.run_b}")
+    if comparison.test_cases.duration_changes:
+        console.print("[yellow]Significant test duration changes:[/yellow]")
+        for duration_change in comparison.test_cases.duration_changes:
+            console.print(
+                f"  - {duration_change.id}: {duration_change.run_a_seconds:.3f}s -> "
+                f"{duration_change.run_b_seconds:.3f}s "
+                f"({duration_change.delta_seconds:+.3f}s)"
+            )
 
 
 def generate_comparison(

@@ -25,6 +25,7 @@ Changelog, and versions follow Semantic Versioning.
 - CLI output-file support for terminal and JSON run comparisons
 - Reproducibility and run-comparison workflow documentation
 - Versioned task bundle export and integrity-checked atomic import
+- Versioned per-test pytest evidence with stable IDs, detailed reports, and regression comparison
 
 ### Changed
 
@@ -33,6 +34,7 @@ Changelog, and versions follow Semantic Versioning.
 - Expanded execution evidence with duration, workspace placeholder, output files, and cleanup data
 - Unified local-path redaction across output, JSON, terminal, HTML, and comparisons
 - Comparisons now reject task-ID mismatches and warn on fingerprint mismatches
+- JUnit reports use real pytest cases when available and retain aggregate legacy compatibility
 
 ## [0.1.0] - 2026-09-25
 

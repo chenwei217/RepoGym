@@ -66,8 +66,10 @@ same-filesystem atomic rename; incomplete executions never publish. Hits validat
 and hashes, then materialize a distinct run ID with cache-hit and source-run provenance. Invalid
 entries are removed under the same lock and recomputed.
 
-The configured test command is generic rather than pytest-specific, but the MVP count adapter
-parses pytest summary output. Public tests are run separately for regression scoring. Submission
+The configured test command remains generic. Recognized pytest commands receive a RepoGym-owned
+JUnit output argument; the adapter parses that standard artifact into sorted per-test evidence
+and derives aggregate counts from it. Non-pytest and legacy runs retain the terminal-summary
+fallback with an explicit unavailable reason. Public tests are run separately for regression scoring. Submission
 deletions are not represented by an overlay directory in the MVP; submissions add or replace
 files. Reference patches deliberately support modifications only—file creation, deletion, and
 rename are excluded to keep the bundled applier small and auditable.
@@ -95,17 +97,19 @@ version. Old results using `execution.command` remain readable. Neither file sto
 task or submission absolute path. Loading an existing run applies redaction again before
 terminal, JSON, HTML, JUnit, SARIF, or comparison rendering.
 
-JUnit is an aggregate adapter: it preserves total, failed, derived skipped, and duration data
-using stable synthetic testcase names because persisted results do not yet contain per-test case
-identities. SARIF maps deterministic, sorted scope violations to versioned rule IDs and attaches
-relative artifact and line locations when present. Both serializers consume the same sanitized
-`GradeResult`; SARIF defensively redacts violation strings again when called directly.
+JUnit renders persisted pytest case identities, statuses, and durations. It retains the earlier
+aggregate adapter with stable synthetic names only for legacy or unsupported runs without
+per-test evidence. Terminal, JSON, and HTML consume the same sorted model. SARIF maps
+deterministic, sorted scope violations to versioned rule IDs and attaches relative artifact and
+line locations when present. Both machine serializers consume the sanitized `GradeResult`;
+SARIF defensively redacts violation strings again when called directly.
 
-`evidence.json` schema v1 unifies command, parsed-test, runtime-environment, and output-artifact
-records. Each record carries its task, source, observation time, status, summary, and typed
-details. Ordering uses kind, source, and summary rather than insertion order. Runtime evidence is
-restricted to Python implementation/version and OS family; commands and artifacts are sanitized
-before evidence is built. Runs without the file are adapted in memory from their existing result,
+`evidence.json` schema v2 unifies command, aggregate and per-test, runtime-environment, and
+output-artifact records. Each record carries its task, source, observation time, status, summary,
+and typed details. Ordering uses kind, source, and summary rather than insertion order. Runtime
+evidence is restricted to Python implementation/version and OS family; failure summaries are
+bounded and credential/path-redacted, and raw JUnit captured output is not persisted. Schema-1
+documents migrate in memory. Runs without the file are adapted from their existing result,
 metadata, and output artifacts.
 
 The fingerprint incorporates length-prefixed normalized relative paths and file bytes in lexical

@@ -36,10 +36,11 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 because the score delta may cross task versions. Terminal and JSON comparisons use the same
 deterministic comparison model.
 
-`report --format junit` emits a deterministic aggregate test suite for CI test viewers. `report
---format sarif` emits SARIF 2.1.0 results for scope violations and includes a relative file and
-line location when the violation carries them. HTML requires `--output`; all machine formats may
-be printed or written with `--output`.
+`report --format junit` emits deterministic collected pytest cases for CI test viewers and falls
+back to aggregate synthetic cases for old runs without that evidence. Terminal, JSON, and HTML
+also display the same per-test model. `report --format sarif` emits SARIF 2.1.0 results for scope
+violations and includes a relative file and line location when the violation carries them. HTML
+requires `--output`; all machine formats may be printed or written with `--output`.
 
 `bundle export` refuses to overwrite an existing path. `bundle import` requires an existing
 destination directory, validates the complete archive, and refuses to replace an existing task.

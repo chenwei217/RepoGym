@@ -25,9 +25,12 @@ the core suite and bundled-task verification require no network connection.
 New production behavior needs a normal-path test, an error-path test, and an integration test
 where it crosses a CLI, filesystem, subprocess, or persisted-artifact boundary.
 
-JUnit tests parse the emitted XML and assert counts, failures, derived skips, duration, escaping,
-and empty results. SARIF tests assert the 2.1.0 contract, stable rule and result ordering, relative
-locations, line numbers, empty results, deterministic serialization, and absolute-path redaction.
+Per-test evidence tests cover pass, failure, error, skip, duplicate identities, stable repeated
+runs, timeout and corrupt/missing JUnit input, legacy loading, bounded failure summaries, and
+credential/path redaction. JUnit tests parse the emitted XML and assert real-case and legacy
+aggregate contracts, counts, failures, errors, skips, duration, escaping, and empty results.
+SARIF tests assert the 2.1.0 contract, stable rule and result ordering, relative locations, line
+numbers, empty results, deterministic serialization, and absolute-path redaction.
 
 CLI contract tests assert the numeric exit-code enum, validation versus environment failures,
 execution and score outcomes, terminal/machine-format parity, unhandled filesystem errors,

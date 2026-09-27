@@ -2,12 +2,13 @@
 
 ## Structured run evidence
 
-New grade runs persist `evidence.json` with schema version 1. Command, test, environment, and
-artifact records share one contract and deterministic semantic ordering. Artifact records contain
-the SHA-256 and UTF-8 byte length of the sanitized persisted content, so they can be checked
-without revealing the original workspace path. Observation time is informative run metadata and
-is not used as an identity or comparison key. Older runs are upgraded in memory when evidence is
-loaded; their files are not rewritten.
+New grade runs persist `evidence.json` with schema version 2. Command, aggregate and per-test,
+environment, and artifact records share one contract and deterministic semantic ordering.
+Artifact records contain the SHA-256 and UTF-8 byte length of the sanitized persisted content, so
+they can be checked without revealing the original workspace path. Pytest case IDs use
+`classname::name`, are sorted, and receive deterministic suffixes for duplicate identities.
+Observation time and test duration are measurements, not identity keys. Schema-1 and older runs
+are upgraded in memory without rewriting their files; missing case data is marked `legacy_run`.
 
 ## Current guarantees
 

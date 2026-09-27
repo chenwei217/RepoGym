@@ -9,12 +9,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from repogym.exceptions import ReportError
 from repogym.models import GradeResult
 
-EVIDENCE_SCHEMA_VERSION = 1
+EVIDENCE_SCHEMA_VERSION = 2
 EvidenceValue = str | int | float | bool | None
 
 
@@ -33,10 +33,19 @@ class EvidenceRecord(BaseModel):
 class EvidenceDocument(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: Literal[1] = 1
+    schema_version: Literal[2] = 2
     task_id: str
     task_fingerprint: str | None = None
     records: list[EvidenceRecord]
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_schema_one(cls, value: Any) -> Any:
+        if isinstance(value, dict) and value.get("schema_version") == 1:
+            migrated = dict(value)
+            migrated["schema_version"] = EVIDENCE_SCHEMA_VERSION
+            return migrated
+        return value
 
 
 def _digest(text: str) -> str:
@@ -107,6 +116,50 @@ def build_evidence(
             ),
         ]
     )
+    test_evidence = result.test_evidence
+    if test_evidence.availability == "available":
+        status_map: dict[
+            Literal["passed", "failed", "error", "skipped"],
+            Literal["failed", "info", "passed", "warning"],
+        ] = {
+            "passed": "passed",
+            "failed": "failed",
+            "error": "failed",
+            "skipped": "warning",
+        }
+        for case in test_evidence.cases:
+            records.append(
+                EvidenceRecord(
+                    kind="test",
+                    source=f"pytest_junit:{case.id}",
+                    observed_at=observed_at,
+                    status=status_map[case.status],
+                    summary=f"Test case {case.id}",
+                    task_id=result.task_id,
+                    details={
+                        "case_id": case.id,
+                        "duration_seconds": case.duration_seconds,
+                        "failure_summary": case.failure_summary,
+                        "output_refs": json.dumps(case.output_refs),
+                        "status": case.status,
+                    },
+                )
+            )
+    else:
+        records.append(
+            EvidenceRecord(
+                kind="test",
+                source="pytest_junit",
+                observed_at=observed_at,
+                status="warning",
+                summary="Per-test results unavailable",
+                task_id=result.task_id,
+                details={
+                    "availability": test_evidence.availability,
+                    "reason": test_evidence.reason,
+                },
+            )
+        )
     for name, content in (("stderr.txt", stderr), ("stdout.txt", stdout)):
         records.append(
             EvidenceRecord(
@@ -136,7 +189,24 @@ def load_evidence(run_directory: Path) -> EvidenceDocument:
         evidence_path = run_directory / "evidence.json"
         if evidence_path.is_file():
             raw: Any = json.loads(evidence_path.read_text(encoding="utf-8"))
-            return EvidenceDocument.model_validate(raw)
+            document = EvidenceDocument.model_validate(raw)
+            has_per_test = any(
+                record.source.startswith("pytest_junit") for record in document.records
+            )
+            if not has_per_test:
+                document.records.append(
+                    EvidenceRecord(
+                        kind="test",
+                        source="pytest_junit",
+                        observed_at=datetime.fromisoformat(str(metadata["created_at"])),
+                        status="warning",
+                        summary="Per-test results unavailable",
+                        task_id=result.task_id,
+                        details={"availability": "unavailable", "reason": "legacy_run"},
+                    )
+                )
+                document.records.sort(key=lambda item: (item.kind, item.source, item.summary))
+            return document
         observed_at = datetime.fromisoformat(str(metadata["created_at"]))
         stdout = (run_directory / "stdout.txt").read_text(encoding="utf-8")
         stderr = (run_directory / "stderr.txt").read_text(encoding="utf-8")

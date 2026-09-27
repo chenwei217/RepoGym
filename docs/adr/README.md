@@ -19,3 +19,4 @@ feature documentation.
 - [0008: Atomic incremental execution cache](0008-atomic-execution-cache.md)
 - [0009: Versioned plugin contracts](0009-versioned-plugin-contracts.md)
 - [0010: Deterministic batch evaluation](0010-deterministic-batch-evaluation.md)
+- [0011: Per-test execution evidence](0011-per-test-execution-evidence.md)

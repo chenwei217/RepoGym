@@ -34,6 +34,8 @@ secrets, restricted networking, and a dedicated unprivileged identity.
 - Jinja autoescaping protects the HTML report from task output injection;
 - absolute paths are redacted consistently from persisted artifacts and all report formats,
   including JUnit and SARIF; SARIF also re-redacts direct serializer input;
+- pytest case evidence retains only stable IDs, status, duration, bounded sanitized failure
+  summaries, and references to sanitized aggregate output; raw JUnit `system-out` is discarded;
 - task bundle import rejects Zip Slip paths, links, name collisions, undeclared or oversized
   members, and integrity mismatches before atomically publishing a validated task;
 - execution cache entries contain only already-sanitized run artifacts plus hashes, reject links

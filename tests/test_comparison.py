@@ -24,6 +24,7 @@ def _write_run(
     fingerprint: str | None = "a" * 64,
     status: str = "completed",
     timed_out: bool = False,
+    test_evidence: dict[str, object] | None = None,
 ) -> Path:
     run = root / run_id
     run.mkdir()
@@ -55,6 +56,8 @@ def _write_run(
             "test_statistics_source": "pytest_summary",
         },
     }
+    if test_evidence is not None:
+        result["test_evidence"] = test_evidence
     (run / "result.json").write_text(json.dumps(result), encoding="utf-8")
     (run / "stdout.txt").write_text("", encoding="utf-8")
     (run / "stderr.txt").write_text("", encoding="utf-8")
@@ -173,3 +176,66 @@ def test_compare_redacts_absolute_paths_from_legacy_results(tmp_path: Path) -> N
     assert "C:\\Users" not in rendered
     assert "/home/alice" not in rendered
     assert "<ABSOLUTE_PATH>" in rendered
+
+
+def test_compare_locates_test_regressions_recoveries_and_duration_changes(
+    tmp_path: Path,
+) -> None:
+    evidence_a = {
+        "schema_version": 1,
+        "availability": "available",
+        "source": "pytest_junit",
+        "reason": "collected",
+        "cases": [
+            {"id": "suite::new_failure", "status": "passed", "duration_seconds": 0.1},
+            {"id": "suite::recovered", "status": "failed", "duration_seconds": 0.2},
+            {"id": "suite::slow", "status": "passed", "duration_seconds": 0.1},
+        ],
+    }
+    evidence_b = {
+        "schema_version": 1,
+        "availability": "available",
+        "source": "pytest_junit",
+        "reason": "collected",
+        "cases": [
+            {"id": "suite::new_failure", "status": "failed", "duration_seconds": 0.1},
+            {"id": "suite::recovered", "status": "passed", "duration_seconds": 0.2},
+            {"id": "suite::slow", "status": "passed", "duration_seconds": 0.3},
+        ],
+    }
+    run_a = _write_run(
+        tmp_path,
+        "run-a",
+        score=50,
+        passed=2,
+        duration=1,
+        violations=[],
+        test_evidence=evidence_a,
+    )
+    run_b = _write_run(
+        tmp_path,
+        "run-b",
+        score=50,
+        passed=2,
+        duration=1,
+        violations=[],
+        test_evidence=evidence_b,
+    )
+
+    comparison = compare_runs(run_a, run_b)
+
+    assert [item.id for item in comparison.test_cases.newly_failing] == ["suite::new_failure"]
+    assert [item.id for item in comparison.test_cases.restored_to_passing] == ["suite::recovered"]
+    assert comparison.test_cases.duration_changes[0].id == "suite::slow"
+    assert comparison.test_cases.duration_changes[0].percent_change == 200
+
+
+def test_compare_marks_legacy_per_test_evidence_unavailable(tmp_path: Path) -> None:
+    run_a = _write_run(tmp_path, "run-a", score=50, passed=2, duration=1, violations=[])
+    run_b = _write_run(tmp_path, "run-b", score=50, passed=2, duration=1, violations=[])
+
+    comparison = compare_runs(run_a, run_b)
+
+    assert comparison.test_cases.warning == (
+        "Per-test comparison unavailable (A=legacy_run, B=legacy_run)."
+    )

@@ -20,6 +20,7 @@ from repogym.models import (
     ExecutionEvidence,
     GradeResult,
     TaskSpec,
+    TestCaseEvidence,
     TestCounts,
 )
 from repogym.reproducibility import task_fingerprint
@@ -188,7 +189,12 @@ def _grade_validated(
             working_directory="<WORKSPACE>",
             stdout_file="stdout.txt",
             stderr_file="stderr.txt",
-            test_statistics_source="pytest_summary",
+            test_statistics_source=(
+                "pytest_junit"
+                if all_result.test_evidence is not None
+                and all_result.test_evidence.availability == "available"
+                else "pytest_summary"
+            ),
             termination_diagnostics=all_result.termination_diagnostics,
             stdout_bytes=all_result.stdout_bytes,
             stderr_bytes=all_result.stderr_bytes,
@@ -208,9 +214,17 @@ def _grade_validated(
             duration_seconds=round(all_result.duration_seconds, 3),
             execution=evidence,
             cache=cache_evidence,
+            test_evidence=(
+                all_result.test_evidence
+                if all_result.test_evidence is not None
+                else TestCaseEvidence.unavailable("collector_unavailable")
+            ),
         )
         safe_stdout = redact_known_paths(all_result.stdout, sensitive_roots)
         safe_stderr = redact_known_paths(all_result.stderr, sensitive_roots)
+        result = GradeResult.model_validate(
+            redact_value(result.model_dump(mode="json"), sensitive_roots)
+        )
         (run_dir / "stdout.txt").write_text(safe_stdout, encoding="utf-8")
         (run_dir / "stderr.txt").write_text(safe_stderr, encoding="utf-8")
         evidence_document = build_evidence(result, created_at, safe_stdout, safe_stderr)

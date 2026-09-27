@@ -96,14 +96,20 @@ def test_grades_correct_submission_and_writes_artifacts(tmp_path: Path) -> None:
     assert result.score == 100
     assert result.tests.passed == 8
     assert result.execution is not None
-    assert result.execution.argv == ["<ABSOLUTE_PATH>", "-m", "pytest", "-q"]
+    assert result.execution.argv == [
+        "<ABSOLUTE_PATH>",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml=<WORKSPACE>/.repogym-pytest-results.xml",
+    ]
     assert result.execution.exit_code == 0
     assert result.execution.timed_out is False
     assert result.execution.duration_seconds >= 0
     assert result.execution.working_directory == "<WORKSPACE>"
     assert result.execution.stdout_file == "stdout.txt"
     assert result.execution.stderr_file == "stderr.txt"
-    assert result.execution.test_statistics_source == "pytest_summary"
+    assert result.execution.test_statistics_source == "pytest_junit"
     assert result.execution.stdout_bytes > 0
     assert result.execution.stderr_bytes == 0
     assert result.execution.stdout_truncated is False
@@ -141,6 +147,8 @@ def test_grade_persists_cancelled_status_without_followup_commands(tmp_path: Pat
     assert result.execution is not None
     assert result.execution.cancelled
     assert not result.execution.timed_out
+    assert result.test_evidence.availability == "unavailable"
+    assert result.test_evidence.reason == "execution_cancelled"
     assert stdout == ""
     assert stderr == ""
 

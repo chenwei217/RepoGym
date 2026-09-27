@@ -21,6 +21,12 @@
   <table><thead><tr><th>Dimension</th><th>Score</th><th>Reason</th></tr></thead><tbody>
   {% for name, dimension in result.dimensions.items() %}<tr><td>{{ name }}</td><td>{{ "%.2f"|format(dimension.score) }}/{{ dimension.max_score }}</td><td>{{ dimension.reason }}</td></tr>{% endfor %}
   </tbody></table>
+  <h2>Per-test results</h2>
+  {% if result.test_evidence.availability == "available" %}
+  <table><thead><tr><th>Test</th><th>Status</th><th>Duration</th><th>Failure</th></tr></thead><tbody>
+  {% for case in result.test_evidence.cases %}<tr><td>{{ case.id }}</td><td>{{ case.status }}</td><td>{{ "%.3f"|format(case.duration_seconds) }}s</td><td>{{ case.failure_summary or "" }}</td></tr>{% endfor %}
+  </tbody></table>
+  {% else %}<p>Unavailable ({{ result.test_evidence.reason }}).</p>{% endif %}
   <h2>Violations</h2>
   {% if result.violations %}<ul>{% for violation in result.violations %}<li class="violation">{{ violation }}</li>{% endfor %}</ul>{% else %}<p>None.</p>{% endif %}
   <details><summary>stdout</summary><pre>{{ stdout }}</pre></details>

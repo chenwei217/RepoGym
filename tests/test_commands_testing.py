@@ -60,7 +60,8 @@ def test_inject_and_run_selected_tests(valid_task: Path, tmp_path: Path) -> None
     task = __import__("repogym.loader", fromlist=["load_task"]).load_task(valid_task)
     result = run_tests(task, workspace, executor, "tests/public")
     assert (workspace / "tests" / "public" / "test_public.py").is_file()
-    assert executor.command[-1] == "tests/public"
+    assert "tests/public" in executor.command
+    assert executor.command[-1] == f"--junitxml={workspace / '.repogym-pytest-results.xml'}"
     assert executor.cwd == workspace
     assert result.return_code == 0
 

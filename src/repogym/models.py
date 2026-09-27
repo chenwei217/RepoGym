@@ -73,6 +73,38 @@ class TaskSpec(StrictModel):
     constraints: ConstraintSpec
 
 
+class TestCaseResult(StrictModel):
+    id: str = Field(min_length=1)
+    status: Literal["passed", "failed", "error", "skipped"]
+    duration_seconds: float = Field(ge=0)
+    failure_summary: str | None = Field(default=None, max_length=1000)
+    output_refs: list[Literal["stdout.txt", "stderr.txt"]] = Field(default_factory=list)
+
+
+class TestCaseEvidence(StrictModel):
+    schema_version: Literal[1] = 1
+    availability: Literal["available", "unavailable"]
+    source: Literal["pytest_junit", "unavailable"]
+    reason: str = Field(min_length=1)
+    cases: list[TestCaseResult] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def valid_state_and_order(self) -> TestCaseEvidence:
+        if self.availability == "available":
+            if self.source != "pytest_junit" or self.reason != "collected":
+                raise ValueError("available test evidence must be collected from pytest_junit")
+        elif self.source != "unavailable" or self.cases:
+            raise ValueError("unavailable test evidence cannot contain test cases")
+        ids = [case.id for case in self.cases]
+        if ids != sorted(ids) or len(ids) != len(set(ids)):
+            raise ValueError("test case ids must be unique and sorted")
+        return self
+
+    @classmethod
+    def unavailable(cls, reason: str) -> TestCaseEvidence:
+        return cls(availability="unavailable", source="unavailable", reason=reason)
+
+
 class ExecutionResult(BaseModel):
     command: list[str]
     return_code: int | None
@@ -86,6 +118,7 @@ class ExecutionResult(BaseModel):
     stderr_bytes: int = Field(default=0, ge=0)
     stdout_truncated: bool = False
     stderr_truncated: bool = False
+    test_evidence: TestCaseEvidence | None = None
 
 
 class TestCounts(BaseModel):
@@ -109,7 +142,7 @@ class ExecutionEvidence(BaseModel):
     working_directory: Literal["<WORKSPACE>"] = "<WORKSPACE>"
     stdout_file: Literal["stdout.txt"] = "stdout.txt"
     stderr_file: Literal["stderr.txt"] = "stderr.txt"
-    test_statistics_source: Literal["pytest_summary", "unavailable"]
+    test_statistics_source: Literal["pytest_junit", "pytest_summary", "unavailable"]
     termination_diagnostics: list[str] = Field(default_factory=list)
     stdout_bytes: int = Field(default=0, ge=0)
     stderr_bytes: int = Field(default=0, ge=0)
@@ -150,3 +183,6 @@ class GradeResult(BaseModel):
     duration_seconds: float
     execution: ExecutionEvidence | None = None
     cache: CacheEvidence | None = None
+    test_evidence: TestCaseEvidence = Field(
+        default_factory=lambda: TestCaseEvidence.unavailable("legacy_run")
+    )
