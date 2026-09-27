@@ -47,6 +47,8 @@ secrets, restricted networking, and a dedicated unprivileged identity.
 
 The `doctor` command deliberately prints the resolved test executable path so operators can
 confirm which interpreter it checked. Persisted run artifacts still redact that absolute path.
+Grading supplies both lexical and canonical temporary-workspace spellings to redaction so Windows
+8.3 path aliases cannot degrade a workspace-relative command argument into an opaque host path.
 
 These controls prevent common accidental escapes and report injection. They are not a substitute
 for OS-level isolation. A Docker executor is planned but not implemented.

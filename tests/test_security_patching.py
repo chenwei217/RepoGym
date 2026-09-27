@@ -95,6 +95,14 @@ def test_sanitizes_absolute_command_arguments() -> None:
     ]
 
 
+def test_command_redaction_accepts_workspace_path_aliases() -> None:
+    alias = Path(r"C:\Users\RUNNER~1\Temp\workspace")
+    canonical = Path(r"C:\Users\runneradmin\AppData\Local\Temp\workspace")
+    command = [f"--junitxml={alias / 'pytest.xml'}"]
+
+    assert sanitize_command(command, [alias, canonical]) == ["--junitxml=<WORKSPACE>/pytest.xml"]
+
+
 def test_redacts_known_paths_from_output(tmp_path: Path) -> None:
     local_file = tmp_path / "workspace" / "test.py"
     output = f"failure in {local_file}"
