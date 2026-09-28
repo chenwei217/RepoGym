@@ -289,7 +289,7 @@ def test_cli_help_list_validate_and_version() -> None:
     assert "Validation passed" in validated.stdout
     versioned = runner.invoke(app, ["version"])
     assert versioned.exit_code == 0
-    assert "0.1.0" in versioned.stdout
+    assert "0.2.0" in versioned.stdout
 
 
 def test_cli_validation_failure_and_html_output_requirement(tmp_path: Path) -> None:

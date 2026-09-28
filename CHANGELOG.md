@@ -5,6 +5,8 @@ Changelog, and versions follow Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-28
+
 ### Added
 
 - Versioned TaskSpec schemas with deterministic legacy migration and future-version rejection
@@ -29,6 +31,7 @@ Changelog, and versions follow Semantic Versioning.
 - Comparable versioned runtime environments in grading, reports, CLI, cache keys, and comparisons
 - Atomic task scaffolding and coded author lint diagnostics
 - Optional Docker/OCI execution with capability diagnostics, resource policy, and fail-closed selection
+- Distribution build and isolated wheel-install verification
 
 ### Changed
 
@@ -38,6 +41,7 @@ Changelog, and versions follow Semantic Versioning.
 - Unified local-path redaction across output, JSON, terminal, HTML, and comparisons
 - Comparisons now reject task-ID mismatches and warn on fingerprint mismatches
 - JUnit reports use real pytest cases when available and retain aggregate legacy compatibility
+- Made the Quick Start checkout path portable across case-sensitive filesystems
 
 ## [0.1.0] - 2026-09-25
 

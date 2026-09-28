@@ -333,8 +333,8 @@ terminal and HTML reports.
 Detailed workflows: [CLI reference](docs/cli.md),
 [reproducibility](docs/reproducibility.md), [run comparison](docs/run-comparison.md),
 [task bundles](docs/task-bundles.md), [execution backends](docs/executors.md),
-[plugin development](docs/plugins.md),
-[batch evaluation](docs/batch-evaluation.md), and
+[plugin development](docs/plugins.md), [batch evaluation](docs/batch-evaluation.md),
+[release process](docs/releasing.md), and
 [project milestones](docs/milestones.md).
 
 ## Roadmap
