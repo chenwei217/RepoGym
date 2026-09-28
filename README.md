@@ -37,7 +37,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 RepoGym requires Python 3.11 or newer.
 
 ```bash
-git clone https://github.com/chenwei217/RepoGym.git
+git clone https://github.com/chenwei217/RepoGym.git repogym
 cd repogym
 python -m pip install -e ".[dev]"
 repogym --help
