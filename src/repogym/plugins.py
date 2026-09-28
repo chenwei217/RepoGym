@@ -13,7 +13,13 @@ from typing import Any, Literal, Protocol, runtime_checkable
 from repogym.exceptions import PluginError, TaskLoadError
 from repogym.executors.base import CancellationToken
 from repogym.loader import task_from_mapping
-from repogym.models import ExecutionResult, GradeResult, TaskSpec
+from repogym.models import (
+    ExecutionResult,
+    ExecutorCapabilities,
+    ExecutorPolicyEvidence,
+    GradeResult,
+    TaskSpec,
+)
 from repogym.security import redact_sensitive_text, redact_value
 
 PLUGIN_API_VERSION = 1
@@ -272,6 +278,25 @@ class PluginExecutorAdapter:
             raise PluginError(f"Plugin {registration.name!r} does not provide an executor")
         self.name = registration.name
         self._backend = registration.executor
+
+    def capabilities(self) -> ExecutorCapabilities:
+        return ExecutorCapabilities(
+            backend=f"plugin:{self.name}",
+            available=True,
+            availability_reason="Compatible executor plugin loaded.",
+            filesystem_isolation=False,
+            network_control=False,
+            cpu_limit=False,
+            memory_limit=False,
+            process_limit=False,
+        )
+
+    def policy(self) -> ExecutorPolicyEvidence:
+        return ExecutorPolicyEvidence(
+            backend=f"plugin:{self.name}",
+            filesystem_mode="unknown",
+            network_mode="unknown",
+        )
 
     def execute(
         self,

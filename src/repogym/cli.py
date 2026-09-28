@@ -23,7 +23,16 @@ from repogym.cache import ExecutionCache
 from repogym.comparison import generate_comparison
 from repogym.doctor import diagnose_task
 from repogym.environment import collect_runtime_environment, render_environment_terminal
-from repogym.exceptions import AuthoringError, BatchError, CacheError, ExecutionError, RepoGymError
+from repogym.exceptions import (
+    AuthoringError,
+    BatchError,
+    CacheError,
+    ExecutionError,
+    ExecutorUnavailableError,
+    RepoGymError,
+)
+from repogym.executors import DockerExecutor, LocalExecutor, executor_capabilities, executor_policy
+from repogym.executors.base import Executor
 from repogym.exit_codes import ExitCode
 from repogym.grader import grade_submission
 from repogym.loader import load_task
@@ -86,6 +95,34 @@ def _print_error(exc: Exception) -> None:
 def _fail(exc: Exception, code: ExitCode) -> None:
     _print_error(exc)
     raise typer.Exit(int(code))
+
+
+def _configured_executor(
+    backend: Literal["local", "docker"],
+    docker_image: str | None,
+    docker_allow_network: bool,
+    docker_cpus: float,
+    docker_memory_mb: int,
+    docker_pids_limit: int,
+) -> Executor:
+    if backend == "local":
+        return LocalExecutor()
+    if docker_image is None:
+        raise RepoGymError("--docker-image is required when --executor docker is selected")
+    try:
+        executor = DockerExecutor(
+            docker_image,
+            network_disabled=not docker_allow_network,
+            cpu_limit=docker_cpus,
+            memory_limit_bytes=docker_memory_mb * 1024 * 1024,
+            process_limit=docker_pids_limit,
+        )
+    except ValueError as exc:
+        raise RepoGymError(str(exc)) from exc
+    capabilities = executor.capabilities()
+    if not capabilities.available:
+        raise ExecutorUnavailableError(capabilities.availability_reason)
+    return executor
 
 
 @app.command("list")
@@ -211,10 +248,36 @@ def doctor(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> Non
 
 
 @app.command()
-def verify(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> None:
+def verify(
+    task: Annotated[Path, typer.Argument(help="Task directory.")],
+    executor_backend: Annotated[
+        Literal["local", "docker"], typer.Option("--executor", help="Execution backend.")
+    ] = "local",
+    docker_image: Annotated[
+        str | None, typer.Option("--docker-image", help="Explicit Docker/OCI image reference.")
+    ] = None,
+    docker_allow_network: Annotated[
+        bool, typer.Option("--docker-allow-network", help="Allow container network access.")
+    ] = False,
+    docker_cpus: Annotated[float, typer.Option("--docker-cpus", min=0.01)] = 1.0,
+    docker_memory_mb: Annotated[int, typer.Option("--docker-memory-mb", min=1)] = 512,
+    docker_pids_limit: Annotated[int, typer.Option("--docker-pids-limit", min=1)] = 128,
+) -> None:
     """Prove that the starter fails and the reference patch passes."""
     try:
-        report = verify_task(task)
+        runner = _configured_executor(
+            executor_backend,
+            docker_image,
+            docker_allow_network,
+            docker_cpus,
+            docker_memory_mb,
+            docker_pids_limit,
+        )
+        report = (
+            verify_task(task) if executor_backend == "local" else verify_task(task, executor=runner)
+        )
+    except ExecutorUnavailableError as exc:
+        _fail(exc, ExitCode.ENVIRONMENT_ERROR)
     except ExecutionError as exc:
         _fail(exc, ExitCode.EXECUTION_FAILED)
     except RepoGymError as exc:
@@ -237,15 +300,38 @@ def grade(
     cache_dir: Annotated[
         Path, typer.Option("--cache-dir", help="Execution cache directory.")
     ] = Path(".repogym/cache"),
+    executor_backend: Annotated[
+        Literal["local", "docker"], typer.Option("--executor", help="Execution backend.")
+    ] = "local",
+    docker_image: Annotated[
+        str | None, typer.Option("--docker-image", help="Explicit Docker/OCI image reference.")
+    ] = None,
+    docker_allow_network: Annotated[
+        bool, typer.Option("--docker-allow-network", help="Allow container network access.")
+    ] = False,
+    docker_cpus: Annotated[float, typer.Option("--docker-cpus", min=0.01)] = 1.0,
+    docker_memory_mb: Annotated[int, typer.Option("--docker-memory-mb", min=1)] = 512,
+    docker_pids_limit: Annotated[int, typer.Option("--docker-pids-limit", min=1)] = 128,
 ) -> None:
     """Grade a candidate submission."""
     try:
+        runner = _configured_executor(
+            executor_backend,
+            docker_image,
+            docker_allow_network,
+            docker_cpus,
+            docker_memory_mb,
+            docker_pids_limit,
+        )
         run_dir = grade_submission(
             task,
             submission,
+            executor=runner,
             cache_root=None if no_cache else cache_dir,
         )
         result, _, _ = load_run(run_dir)
+    except ExecutorUnavailableError as exc:
+        _fail(exc, ExitCode.ENVIRONMENT_ERROR)
     except CacheError as exc:
         _fail(exc, ExitCode.ENVIRONMENT_ERROR)
     except RepoGymError as exc:
@@ -482,6 +568,53 @@ def environment_command(
         )
     else:
         render_environment_terminal(environment, console)
+
+
+@app.command("executor-info")
+def executor_info(
+    backend: Annotated[
+        Literal["local", "docker"], typer.Option("--backend", help="Backend to inspect.")
+    ] = "local",
+    docker_image: Annotated[
+        str, typer.Option("--docker-image", help="Docker/OCI image policy to inspect.")
+    ] = "python:3.12-slim",
+    format_name: Annotated[
+        Literal["terminal", "json"], typer.Option("--format", help="Diagnostic format.")
+    ] = "terminal",
+) -> None:
+    """Show backend availability, isolation capabilities, and effective policy."""
+    try:
+        executor: Executor = LocalExecutor() if backend == "local" else DockerExecutor(docker_image)
+    except ValueError as exc:
+        _fail(RepoGymError(str(exc)), ExitCode.TASK_INVALID)
+    capabilities = executor_capabilities(executor)
+    policy = executor_policy(executor)
+    if format_name == "json":
+        console.print(
+            json.dumps(
+                {
+                    "capabilities": capabilities.model_dump(mode="json"),
+                    "policy": policy.model_dump(mode="json"),
+                },
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            ),
+            markup=False,
+            soft_wrap=True,
+        )
+    else:
+        table = Table("Property", "Value")
+        for name, value in capabilities.model_dump(mode="json").items():
+            table.add_row(f"capability.{name}", str(value))
+        for name, value in policy.model_dump(mode="json").items():
+            table.add_row(f"policy.{name}", str(value))
+        console.print(table)
+    if not capabilities.available:
+        error_console.print(
+            "[red]FAIL[/red] Backend unavailable; RepoGym will not fall back to local execution."
+        )
+        raise typer.Exit(int(ExitCode.ENVIRONMENT_ERROR))
 
 
 @app.command()

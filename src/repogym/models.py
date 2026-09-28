@@ -123,6 +123,27 @@ class ExecutionResult(BaseModel):
     test_evidence: TestCaseEvidence | None = None
 
 
+class ExecutorCapabilities(StrictModel):
+    backend: str = Field(min_length=1)
+    available: bool
+    availability_reason: str = Field(min_length=1)
+    filesystem_isolation: bool
+    network_control: bool
+    cpu_limit: bool
+    memory_limit: bool
+    process_limit: bool
+
+
+class ExecutorPolicyEvidence(StrictModel):
+    backend: str = Field(min_length=1)
+    filesystem_mode: Literal["host", "container_bind", "unknown"]
+    network_mode: Literal["host", "none", "bridge", "unknown"]
+    cpu_limit: float | None = Field(default=None, gt=0)
+    memory_limit_bytes: int | None = Field(default=None, gt=0)
+    process_limit: int | None = Field(default=None, gt=0)
+    image: str | None = None
+
+
 class TestCounts(BaseModel):
     passed: int = 0
     failed: int = 0
@@ -150,6 +171,7 @@ class ExecutionEvidence(BaseModel):
     stderr_bytes: int = Field(default=0, ge=0)
     stdout_truncated: bool = False
     stderr_truncated: bool = False
+    executor_policy: ExecutorPolicyEvidence | None = None
 
     @model_validator(mode="before")
     @classmethod

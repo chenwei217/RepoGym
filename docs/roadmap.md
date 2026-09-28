@@ -7,7 +7,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 - versioned YAML task loading with legacy migration, structural validation, reference-patch
   verification, and deterministic SHA-256 fingerprints of task inputs;
 - a local cross-platform executor with direct argv execution, timeout process-tree cleanup, and
-  an active-interpreter binding for generic Python test commands;
+  an active-interpreter binding for generic Python test commands, plus an explicit optional
+  Docker/OCI adapter with declared isolation and resource policy;
 - preflight submission auditing, safe copying, path redaction, scoring, persisted evidence, and
   terminal, JSON, HTML, JUnit XML, and SARIF reports;
 - stable automation exit codes separating invalid input, execution, score, environment, and
@@ -25,7 +26,7 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 | Priority | Need | Acceptance criteria | Likely modules |
 | --- | --- | --- | --- |
-| P1 | Sandboxed execution backend | A separately configured backend enforces filesystem, network, CPU, memory, and process limits without weakening the local executor contract. | `executors`, `plugins`, deployment docs |
+| P1 | Hardened remote/VM execution | A separately operated backend authenticates requests, transfers only verified bundles, contains hostile kernels/runtime escapes, and returns signed evidence. | executor plugin, bundle transport, deployment docs |
 
 ## Completed roadmap items
 
@@ -59,6 +60,9 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 - Task scaffolding validates in a same-filesystem staging tree before atomic publication;
   interactive/non-interactive CLI paths and coded author lint cover placeholders, incomplete
   counts, risky commands, broad scope, duplicate targets, and path traversal.
+- Executor capabilities distinguish host and container controls. Explicit Docker execution uses a
+  read-only root, workspace bind, default-disabled network, resource/PID limits, availability
+  diagnostics, stopped-container cleanup, and fail-closed selection without changing local default.
 
 ## Test gaps
 
@@ -73,4 +77,4 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 ## Delivery order
 
-A separately configured sandboxed backend is the next security priority.
+A hardened remote or disposable-VM backend is the next security priority for hostile workloads.

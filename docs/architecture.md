@@ -13,9 +13,9 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
    SHA-256 identity.
 5. `security` audits submission trees before copying, records content hashes, and applies the
    shared redaction policy used by persistence and reporting.
-6. `Executor` abstracts command execution; `LocalExecutor` owns the exact child process, drains
-   both pipes into bounded head/tail buffers, and uses `psutil` to terminate descendants on
-   timeout or cooperative cancellation.
+6. `Executor` abstracts execution and declares isolation capabilities/effective policy.
+   `LocalExecutor` owns and cleans the exact host process tree; optional `DockerExecutor` builds
+   a bounded, non-networked container command and force-removes stopped containers.
 7. `verifier` compares the starter failure count with metadata, applies a strict unified diff,
    and proves the reference result.
 8. `grader` overlays a candidate, runs all and public tests, then persists artifacts and a
@@ -35,8 +35,15 @@ RepoGym uses a linear pipeline with small modules and explicit data models.
 The public Python surface is intentionally small: `load_task`, `validate_task`, `verify_task`,
 `grade_submission`, report generation, comparison, and the explicit plugin registry/adapters are
 the supported orchestration entry points. The Typer CLI is a thin adapter over those services.
-Executor implementations conform to the `Executor` protocol; today only `LocalExecutor` is
-shipped in core.
+Executor implementations conform to the `Executor` protocol. `LocalExecutor` remains the default;
+`DockerExecutor` is a core opt-in adapter and is never an automatic fallback.
+
+The Docker adapter maps the temporary task workspace to `/workspace`, translates the active host
+Python marker to the image's `python`, and keeps the container root read-only. Its direct Docker
+argv applies `no-new-privileges`, a bounded temporary filesystem, disabled networking by default,
+and positive CPU, memory, and PID limits. `executor-info` probes both CLI and daemon. Selected
+backend failure is an environment error rather than permission to execute locally. The image and
+daemon remain external trust/configuration boundaries.
 
 Plugin API version 1 uses one `repogym.plugins` entry-point group. A registration may provide a
 task loader, executor backend, reporter, or any combination. Plugin-facing DTOs carry standard
@@ -91,7 +98,8 @@ cancelled result and does not launch remaining test or quality commands.
 
 `result.json` records the task fingerprint plus sanitized argv, exit code, timeout state,
 duration, `<WORKSPACE>` working directory, output filenames, termination diagnostics, and the
-test-statistics source. It also embeds environment schema v1, collected once before execution,
+test-statistics source. New evidence also records the selected backend's non-secret filesystem,
+network, CPU, memory, PID, and image policy. It embeds environment schema v1, collected once before execution,
 with a canonical digest over an allowlisted Python/OS/dependency/tool/executor snapshot. Output
 evidence includes original byte counts and per-stream truncation
 flags. The executor retains bounded beginnings and endings while continuously draining the child

@@ -16,6 +16,7 @@ versioned directory and produces durable run artifacts instead of a single opaqu
 - Versioned, privacy-preserving runtime environment snapshots and fingerprints
 - Atomic interactive/non-interactive task scaffolding with author-focused lint diagnostics
 - Temporary workspaces and a replaceable executor interface
+- Explicit optional Docker/OCI execution with declared isolation capabilities and bounded policy
 - Generic `python` task commands are bound to the interpreter running RepoGym
 - Deterministic correctness, regression, static-quality, and scope scores
 - Deterministic run-to-run comparison in terminal or JSON form
@@ -52,6 +53,7 @@ repogym verify tasks/python-cache-ttl
 repogym grade tasks/python-cache-ttl --submission examples/submissions/cache-ttl-fixed
 repogym cache verify
 repogym plugins
+repogym executor-info --backend local
 repogym batch run examples/batch.yaml
 repogym report .repogym/runs/<run-id> --format html --output report.html
 repogym compare .repogym/runs/<run-a> .repogym/runs/<run-b>
@@ -78,8 +80,9 @@ pytest --cov=repogym --cov-report=term-missing
 | `repogym lint-task TASK` | Diagnose author completeness and reproducibility risks |
 | `repogym doctor TASK` | Diagnose the local execution environment |
 | `repogym environment [--format terminal\|json]` | Show the runtime snapshot used by new grades |
-| `repogym verify TASK` | Prove the starter fails and the reference fix passes |
-| `repogym grade TASK --submission DIR [--no-cache]` | Grade a candidate with incremental caching |
+| `repogym executor-info [--backend local\|docker] [--format terminal\|json]` | Inspect backend availability and policy |
+| `repogym verify TASK [--executor local\|docker]` | Prove the starter fails and the reference fix passes |
+| `repogym grade TASK --submission DIR [--no-cache] [--executor local\|docker]` | Grade a candidate with incremental caching |
 | `repogym report RUN --format terminal\|json\|html\|junit\|sarif [--output FILE]` | Re-render saved run artifacts |
 | `repogym compare RUN_A RUN_B --format terminal\|json [--output FILE]` | Compare two persisted runs |
 | `repogym bundle export TASK OUTPUT` | Export a versioned, integrity-checked task package |
@@ -274,9 +277,11 @@ flowchart TD
     G --> H[Run Comparison]
 ```
 
-The `Executor` protocol separates orchestration from process execution. The current release
-ships a `LocalExecutor`; a future container executor can implement the same interface. More
-detail is in [Architecture](docs/architecture.md).
+The `Executor` protocol separates orchestration from process execution and requires explicit
+capability and policy declarations. The default `LocalExecutor` is portable but unisolated. The
+optional `DockerExecutor` is selected only through `--executor docker --docker-image IMAGE`; it
+fails closed when the Docker CLI or daemon is unavailable. More detail is in
+[Execution backends](docs/executors.md) and [Architecture](docs/architecture.md).
 
 Python callers can cooperatively stop local execution with a thread-safe token:
 
@@ -298,8 +303,10 @@ during execution it terminates the same captured process tree as a timeout. Resu
 **LocalExecutor is not a sandbox.** Task tests and candidate code execute as the current OS
 user and must be trusted. RepoGym audits submissions before copying, rejects links and path
 escapes, and terminates the recorded process tree on timeout, but those controls do not contain
-malicious code. Use a disposable VM or appropriately configured container for untrusted
-material. Read [Security model](docs/security-model.md) before operating a shared service.
+malicious code. Use a disposable VM or the explicitly configured Docker backend with an
+independently hardened daemon and image policy for untrusted material. Container execution
+improves isolation but cannot attest the image or runtime. Read
+[Security model](docs/security-model.md) before operating a shared service.
 
 Persisted execution evidence includes a sanitized argument vector, exit code, timeout state,
 duration, `<WORKSPACE>` working directory, output artifact names, test-statistics source, and
@@ -325,7 +332,8 @@ terminal and HTML reports.
 
 Detailed workflows: [CLI reference](docs/cli.md),
 [reproducibility](docs/reproducibility.md), [run comparison](docs/run-comparison.md),
-[task bundles](docs/task-bundles.md), [plugin development](docs/plugins.md),
+[task bundles](docs/task-bundles.md), [execution backends](docs/executors.md),
+[plugin development](docs/plugins.md),
 [batch evaluation](docs/batch-evaluation.md), and
 [project milestones](docs/milestones.md).
 
@@ -333,7 +341,6 @@ Detailed workflows: [CLI reference](docs/cli.md),
 
 The following capabilities are planned and are not present in the MVP:
 
-- Docker/OCI executor with resource and network policies
 - GitHub issue importer
 - coding-agent adapters
 - richer language-specific test result adapters

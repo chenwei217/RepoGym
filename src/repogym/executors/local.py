@@ -13,7 +13,7 @@ from typing import BinaryIO
 import psutil
 
 from repogym.executors.base import CancellationToken
-from repogym.models import ExecutionResult
+from repogym.models import ExecutionResult, ExecutorCapabilities, ExecutorPolicyEvidence
 
 DEFAULT_OUTPUT_LIMIT_BYTES = 1024 * 1024
 _READ_CHUNK_BYTES = 64 * 1024
@@ -152,6 +152,25 @@ class LocalExecutor:
             raise ValueError("output limits must be positive")
         self.max_stdout_bytes = max_stdout_bytes
         self.max_stderr_bytes = max_stderr_bytes
+
+    def capabilities(self) -> ExecutorCapabilities:
+        return ExecutorCapabilities(
+            backend="local",
+            available=True,
+            availability_reason="Local subprocess execution is available.",
+            filesystem_isolation=False,
+            network_control=False,
+            cpu_limit=False,
+            memory_limit=False,
+            process_limit=False,
+        )
+
+    def policy(self) -> ExecutorPolicyEvidence:
+        return ExecutorPolicyEvidence(
+            backend="local",
+            filesystem_mode="host",
+            network_mode="host",
+        )
 
     def execute(
         self,

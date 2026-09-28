@@ -51,3 +51,7 @@ class BatchError(RepoGymError):
 
 class AuthoringError(RepoGymError):
     """Raised when task scaffolding or author diagnostics cannot be completed."""
+
+
+class ExecutorUnavailableError(RepoGymError):
+    """Raised when an explicitly selected execution backend is unavailable."""

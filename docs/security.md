@@ -1,8 +1,9 @@
 # Security overview
 
-RepoGym evaluates trusted task and submission code. It is not a sandbox: the local executor runs
-with the invoking user's privileges and network access. Use a disposable VM or an independently
-hardened container for untrusted material.
+RepoGym's default local executor runs trusted task and submission code with the invoking user's
+privileges and network access. It is not a sandbox. An optional, explicitly selected Docker
+backend declares and applies container/resource policy, but daemon and image security remain the
+operator's responsibility and unavailable isolation never falls back to local execution.
 
 The project validates relative task paths, audits submission trees before copying, rejects links
 and special files, applies patches within the workspace, starts commands with `shell=False`,

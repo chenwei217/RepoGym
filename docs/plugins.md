@@ -39,7 +39,9 @@ The complete minimal reporter is in
 - `ExecutorBackendPlugin.execute(PluginExecutionRequest)` returns a
   `PluginExecutionResponse`. The request contains immutable argv, working directory, timeout, and
   a read-only cancellation signal. `PluginExecutorAdapter` converts the response to the internal
-  execution model and derives byte counts when omitted.
+  execution model and derives byte counts when omitted. Plugin API version 1 cannot attest
+  isolation controls, so the adapter declares a conservative unknown policy; use the built-in
+  Docker adapter when the core capability contract is required.
 - `ReporterPlugin.render(PluginReportRequest)` returns text. RepoGym supplies a serialization-
   shaped result mapping and sanitized stdout/stderr, then redacts returned text again.
 

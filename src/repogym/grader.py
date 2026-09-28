@@ -13,7 +13,7 @@ from repogym.cache import ExecutionCache, build_cache_key
 from repogym.environment import collect_runtime_environment, executor_identity
 from repogym.evidence import build_evidence
 from repogym.exceptions import SecurityError, ValidationError
-from repogym.executors.base import CancellationToken, Executor
+from repogym.executors.base import CancellationToken, Executor, executor_policy
 from repogym.executors.local import LocalExecutor
 from repogym.models import (
     CacheEvidence,
@@ -213,6 +213,7 @@ def _grade_validated(
             stderr_bytes=all_result.stderr_bytes,
             stdout_truncated=all_result.stdout_truncated,
             stderr_truncated=all_result.stderr_truncated,
+            executor_policy=executor_policy(runner),
         )
         cache_evidence = CacheEvidence(key=cache_key, hit=False) if cache_key is not None else None
         result = GradeResult(

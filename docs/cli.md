@@ -19,11 +19,12 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 | `repogym init-task [TASK_ID] [--title TITLE] [--tasks-dir DIR] [--non-interactive]` | author values | no | new validated task directory |
 | `repogym lint-task TASK` | task metadata and author content | no | no |
 | `repogym doctor TASK` | task metadata and filesystem metadata | no | temporary probe only |
-| `repogym verify TASK` | complete task | starter and reference | temporary workspace only |
-| `repogym grade TASK --submission DIR [--no-cache]` | task and audited submission | candidate and tests on cache miss | `.repogym/runs/<id>/`, `.repogym/cache/` |
+| `repogym verify TASK [--executor local\|docker]` | complete task | starter and reference | temporary workspace only |
+| `repogym grade TASK --submission DIR [--no-cache] [--executor local\|docker]` | task and audited submission | candidate and tests on cache miss | `.repogym/runs/<id>/`, `.repogym/cache/` |
 | `repogym report RUN --format terminal\|json\|html\|junit\|sarif [--output FILE]` | run artifacts | no | optional output file |
 | `repogym compare RUN_A RUN_B --format terminal\|json [--output FILE]` | two run artifacts | no | optional output file |
 | `repogym environment [--format terminal\|json]` | current non-sensitive runtime facts | no | no |
+| `repogym executor-info [--backend local\|docker] [--format terminal\|json]` | backend availability and policy | no | no |
 | `repogym bundle export TASK OUTPUT` | validated task directory | no | new ZIP task bundle |
 | `repogym bundle import BUNDLE --destination DIR` | ZIP task bundle | no | verified task directory |
 | `repogym cache list [--cache-dir PATH]` | cache manifests and artifacts | no | no |
@@ -38,6 +39,10 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 `init-task` prompts for omitted ID/title unless `--non-interactive` is set, validates a staged
 tree, refuses existing targets, and publishes atomically. `lint-task` reports coded author
 warnings and returns invalid-task code 10 only for validation or authoring errors.
+`verify` and `grade` stay local unless `--executor docker --docker-image IMAGE` is explicit.
+Docker policy options set CPU, memory, PID, and opt-in network access. `executor-info` probes the
+selected backend without executing task code; unavailable Docker returns code 40 and never causes
+a local fallback. See [Execution backends](executors.md).
 `compare` rejects different task IDs. Equal task IDs with unequal fingerprints produce a warning
 because the score delta may cross task versions. Terminal and JSON comparisons use the same
 deterministic comparison model. Available runtime snapshots add equality, fingerprints, and sorted

@@ -9,7 +9,7 @@ from rich.console import Console
 from rich.table import Table
 
 from repogym import __version__
-from repogym.executors.base import Executor
+from repogym.executors.base import Executor, executor_policy
 from repogym.executors.local import LocalExecutor
 from repogym.models import RuntimeEnvironmentEvidence, RuntimeEnvironmentSnapshot
 
@@ -27,6 +27,13 @@ def executor_identity(executor: Executor) -> str:
     """Return a stable identity without paths, hostnames, or object representations."""
     if isinstance(executor, LocalExecutor):
         return f"local:stdout={executor.max_stdout_bytes}:stderr={executor.max_stderr_bytes}"
+    policy = executor_policy(executor)
+    if policy.backend == "docker":
+        return (
+            f"docker:image={policy.image}:network={policy.network_mode}:"
+            f"cpu={policy.cpu_limit}:memory={policy.memory_limit_bytes}:"
+            f"pids={policy.process_limit}"
+        )
     return f"{type(executor).__module__}.{type(executor).__qualname__}"
 
 

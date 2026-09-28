@@ -28,6 +28,7 @@ Changelog, and versions follow Semantic Versioning.
 - Versioned per-test pytest evidence with stable IDs, detailed reports, and regression comparison
 - Comparable versioned runtime environments in grading, reports, CLI, cache keys, and comparisons
 - Atomic task scaffolding and coded author lint diagnostics
+- Optional Docker/OCI execution with capability diagnostics, resource policy, and fail-closed selection
 
 ### Changed
 
