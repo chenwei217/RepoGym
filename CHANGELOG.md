@@ -11,6 +11,8 @@ Changelog, and versions follow Semantic Versioning.
   structured contribution templates, and explicit maintenance/support policies
 - PEP 561 typed-package metadata and an explicit compatibility policy for documented APIs,
   schemas, artifacts, plugins, CLI automation, and supported Python versions
+- CI-gated, fail-closed GitHub Release automation with exact tag/commit verification, clean builds,
+  offline wheel installation, checksums, and visibility-aware artifact attestation
 
 ### Security
 

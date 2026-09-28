@@ -23,8 +23,13 @@ Do not tag a commit until main CI passes.
 
 ## Publish
 
-Build the artifacts from the exact release commit, create an annotated `vX.Y.Z` tag, push the tag,
-and wait for tag CI. Create the GitHub Release from that existing tag and attach the verified wheel
-and source archive. PyPI publication is a separate, explicitly authorized operation.
+Create an annotated `vX.Y.Z` tag on the prepared release commit and push the tag. The tag starts the
+full CI matrix. After CI succeeds, the Automated Release workflow verifies the exact tag/commit and
+version mapping, rebuilds in a clean runner, installs the wheel without an index, writes
+`SHA256SUMS`, and creates the GitHub Release with the wheel, source archive, and checksums.
+
+The workflow never overwrites an existing release. Artifact attestations run when repository
+visibility and the GitHub plan support them. PyPI publication remains a separate operation until a
+Trusted Publisher is configured; do not add a long-lived PyPI token.
 
 Never move or replace a published tag. Corrections require a new patch release.

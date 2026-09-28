@@ -94,6 +94,39 @@ def test_repository_maintenance_forms_and_dependabot_are_parseable() -> None:
         assert form["body"]
 
 
+def test_release_workflow_is_ci_gated_pinned_and_fail_closed() -> None:
+    workflow = yaml.load(
+        (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    assert workflow["on"]["workflow_run"] == {
+        "workflows": ["CI"],
+        "types": ["completed"],
+    }
+    job = workflow["jobs"]["release"]
+    condition = job["if"]
+    assert "conclusion == 'success'" in condition
+    assert "event == 'push'" in condition
+    assert "startsWith" in condition
+    assert job["permissions"] == {
+        "attestations": "write",
+        "contents": "write",
+        "id-token": "write",
+    }
+    action_steps = [step for step in job["steps"] if "uses" in step]
+    assert all(_ACTION_SHA.fullmatch(step["uses"]) for step in action_steps)
+
+    commands = "\n".join(step.get("run", "") for step in job["steps"])
+    assert "git rev-list -n 1" in commands
+    assert 'test "${RELEASE_TAG}" = "v${PROJECT_VERSION}"' in commands
+    assert "pip install --no-index --no-deps" in commands
+    assert "sha256sum" in commands
+    assert 'gh release create "${RELEASE_TAG}"' in commands
+    assert "--verify-tag" in commands
+    attestation = next(step for step in action_steps if "attest-build-provenance" in step["uses"])
+    assert attestation["if"] == "github.event.repository.visibility == 'public'"
+
+
 def test_comparison_smoke_accepts_expected_score_code(tmp_path: Path) -> None:
     runs = tmp_path / "runs"
     calls: list[list[str]] = []
