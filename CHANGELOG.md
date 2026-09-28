@@ -18,6 +18,7 @@ Changelog, and versions follow Semantic Versioning.
 
 - Rejected XML entities in pytest JUnit evidence and replaced optimization-sensitive execution
   assertions with explicit runtime checks
+- Documented the plan-compatible private security contact path without exposing a dead advisory URL
 
 ## [0.2.0] - 2026-09-28
 

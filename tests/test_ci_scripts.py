@@ -92,6 +92,10 @@ def test_repository_maintenance_forms_and_dependabot_are_parseable() -> None:
         assert form["name"]
         assert form["description"]
         assert form["body"]
+    issue_config = yaml.safe_load((issue_templates / "config.yml").read_text(encoding="utf-8"))
+    security_link = issue_config["contact_links"][0]
+    assert security_link["url"].startswith("https://github.com/")
+    assert "/security/advisories/new" not in security_link["url"]
 
 
 def test_release_workflow_is_ci_gated_pinned_and_fail_closed() -> None:
