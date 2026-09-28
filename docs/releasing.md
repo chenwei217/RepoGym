@@ -17,9 +17,9 @@ dated CHANGELOG heading.
    pytest --cov=repogym --cov-report=term-missing
    ```
 
-The release contract test builds both distributions, validates their metadata and contents, then
-installs the wheel without network access in a clean temporary virtual environment. Do not tag a
-commit until main CI passes.
+The release contract test builds both distributions, validates their metadata, PEP 561 marker, and
+contents, then installs the wheel without network access in a clean temporary virtual environment.
+Do not tag a commit until main CI passes.
 
 ## Publish
 

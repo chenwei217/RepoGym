@@ -9,6 +9,8 @@ Changelog, and versions follow Semantic Versioning.
 
 - Least-privilege, SHA-pinned CI with Python 3.11-3.14 coverage, Bandit, pip-audit, Dependabot,
   structured contribution templates, and explicit maintenance/support policies
+- PEP 561 typed-package metadata and an explicit compatibility policy for documented APIs,
+  schemas, artifacts, plugins, CLI automation, and supported Python versions
 
 ### Security
 

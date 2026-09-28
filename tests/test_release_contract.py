@@ -46,7 +46,9 @@ def test_release_builds_installable_wheel_and_complete_sdist(tmp_path: Path) -> 
         metadata = wheel.read(f"repogym-{version}.dist-info/METADATA").decode("utf-8")
         entry_points = wheel.read(f"repogym-{version}.dist-info/entry_points.txt").decode("utf-8")
     assert "repogym/__init__.py" in names
+    assert "repogym/py.typed" in names
     assert f"Version: {version}\n" in metadata
+    assert "Classifier: Typing :: Typed\n" in metadata
     assert "repogym = repogym.cli:app" in entry_points
 
     archive_root = f"repogym-{version}"
