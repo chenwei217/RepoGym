@@ -14,8 +14,10 @@ coverage report --fail-under=85
 The suite is organized by responsibility: task loading and validation, command parsing and test
 execution, reproducibility, submission and patch security, diagnostics, scoring, comparisons,
 machine-report format contracts, and end-to-end CLI workflows. The CI matrix runs the same
-checks on Ubuntu and Windows with
-Python 3.11 and 3.12, then verifies both bundled tasks and smoke-tests doctor and comparison.
+checks on Ubuntu and Windows with Python 3.11 through 3.14, then verifies both bundled tasks and
+smoke-tests doctor and comparison. A separate CI job runs Bandit against production code and
+pip-audit in a clean environment. GitHub Actions are pinned to immutable commit SHAs and updated
+through Dependabot.
 
 Some link-related tests are skipped on Windows runners without the privilege required to create a
 symbolic link. A skip is reported by pytest and must not be used to avoid testing portable
@@ -26,8 +28,9 @@ New production behavior needs a normal-path test, an error-path test, and an int
 where it crosses a CLI, filesystem, subprocess, or persisted-artifact boundary.
 
 Per-test evidence tests cover pass, failure, error, skip, duplicate identities, stable repeated
-runs, timeout and corrupt/missing JUnit input, legacy loading, bounded failure summaries, and
-credential/path redaction. JUnit tests parse the emitted XML and assert real-case and legacy
+runs, timeout and corrupt/missing/malicious JUnit input, legacy loading, bounded failure summaries,
+and credential/path redaction. JUnit input is parsed with defusedxml. Report tests parse emitted XML
+and assert real-case and legacy
 aggregate contracts, counts, failures, errors, skips, duration, escaping, and empty results.
 SARIF tests assert the 2.1.0 contract, stable rule and result ordering, relative locations, line
 numbers, empty results, deterministic serialization, and absolute-path redaction.

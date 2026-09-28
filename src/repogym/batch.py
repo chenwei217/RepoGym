@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import os
 import uuid
-import xml.etree.ElementTree as ET
+
+# This module creates XML and never parses untrusted XML.
+import xml.etree.ElementTree as ET  # nosec B405
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from io import StringIO

@@ -183,7 +183,8 @@ class DockerExecutor:
             "--security-opt",
             "no-new-privileges",
             "--tmpfs",
-            "/tmp:rw,noexec,nosuid,size=67108864",
+            # Fixed in-container tmpfs mount; it is not a host temporary path.
+            "/tmp:rw,noexec,nosuid,size=67108864",  # nosec B108
             "--mount",
             f"type=bind,source={mount_root},target={_CONTAINER_WORKSPACE}",
             "--workdir",

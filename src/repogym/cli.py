@@ -231,8 +231,8 @@ def lint_task_command(
 def doctor(task: Annotated[Path, typer.Argument(help="Task directory.")]) -> None:
     """Diagnose whether a task can run in the current environment."""
     report = diagnose_task(task)
-    styles = {"pass": "green", "warning": "yellow", "fail": "red"}
-    labels = {"pass": "PASS", "warning": "WARN", "fail": "FAIL"}
+    styles = {"pass": "green", "warning": "yellow", "fail": "red"}  # nosec B105
+    labels = {"pass": "PASS", "warning": "WARN", "fail": "FAIL"}  # nosec B105
     for check in report.checks:
         message = (
             check.message

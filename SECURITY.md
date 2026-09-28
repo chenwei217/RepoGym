@@ -4,10 +4,18 @@ RepoGym's local executor runs task and submission code with the privileges of th
 user. It is intended only for trusted code. Do not expose it as a public grading service or run
 unknown submissions on a workstation containing valuable data.
 
-For suspected vulnerabilities, avoid a public issue until maintainers have had a chance to
-assess the report. Because this repository is a project template without a published security
-contact yet, use GitHub's private vulnerability reporting feature after the repository is
-published. Include affected versions, reproduction steps, and impact.
+## Supported versions
+
+The latest GitHub Release and the current `main` branch receive security fixes. Older releases may
+be used to reproduce a report but are not guaranteed to receive backports.
+
+## Reporting
+
+For suspected vulnerabilities, avoid a public issue until maintainers have assessed the report.
+Use GitHub's private vulnerability reporting form for this repository. Include affected versions,
+sanitized reproduction steps, impact, and any suggested mitigation. Do not include live credentials
+or private task contents. Maintainers aim to acknowledge a complete report within seven days and
+will coordinate disclosure after a fix or documented mitigation is available.
 
 See `docs/security-model.md` for trust boundaries and deployment guidance.
 

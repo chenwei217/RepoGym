@@ -136,6 +136,14 @@ def test_parse_pytest_junit_reports_missing_and_invalid_artifacts(tmp_path: Path
     invalid.write_text("<broken", encoding="utf-8")
     assert parse_pytest_junit(invalid, tmp_path).reason == "structured_output_invalid"
 
+    entity = tmp_path / "entity.xml"
+    entity.write_text(
+        '<!DOCTYPE testsuite [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
+        '<testsuite><testcase name="unsafe">&xxe;</testcase></testsuite>',
+        encoding="utf-8",
+    )
+    assert parse_pytest_junit(entity, tmp_path).reason == "structured_output_invalid"
+
 
 def test_structured_counts_include_errors_but_not_skips() -> None:
     result = ExecutionResult(

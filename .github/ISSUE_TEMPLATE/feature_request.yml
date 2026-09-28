@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose a user-visible RepoGym capability.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the workflow or failure mode that is not handled today.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observable acceptance criteria
+      description: State what a user or automation should be able to observe.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and security considerations
+      description: Note task schema, artifact, plugin, platform, or trust-boundary impact.

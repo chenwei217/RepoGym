@@ -5,12 +5,14 @@ import shlex
 from pathlib import Path
 
 import pytest
+import yaml
 
 from repogym.ci_smoke import SmokeError, run_smoke
 from repogym.exit_codes import ExitCode
 
 ROOT = Path(__file__).parents[1]
 _BASH_BLOCK = re.compile(r"```bash\s*\n(?P<commands>.*?)```", re.DOTALL)
+_ACTION_SHA = re.compile(r"^[^@]+@[0-9a-f]{40}$")
 
 
 def _assert_checkout_path_matches(commands: str) -> None:
@@ -50,6 +52,46 @@ def test_checkout_path_check_rejects_case_mismatch() -> None:
     commands = "git clone https://example.test/Owner/RepoGym.git\ncd repogym\n"
     with pytest.raises(AssertionError, match="checkout directory mismatch"):
         _assert_checkout_path_matches(commands)
+
+
+def test_ci_has_least_privilege_pinned_actions_and_supported_python_matrix() -> None:
+    workflow = yaml.load(
+        (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    assert workflow["permissions"] == {"contents": "read"}
+    assert workflow["concurrency"]["cancel-in-progress"] == "true"
+    test_job = workflow["jobs"]["test"]
+    assert test_job["strategy"]["matrix"]["python-version"] == [
+        "3.11",
+        "3.12",
+        "3.13",
+        "3.14",
+    ]
+    assert test_job["strategy"]["matrix"]["os"] == ["ubuntu-latest", "windows-latest"]
+
+    action_steps = [
+        step["uses"] for job in workflow["jobs"].values() for step in job["steps"] if "uses" in step
+    ]
+    assert action_steps
+    assert all(_ACTION_SHA.fullmatch(action) for action in action_steps)
+    security_commands = [step.get("run", "") for step in workflow["jobs"]["security"]["steps"]]
+    assert any(command.startswith("bandit ") for command in security_commands)
+    assert any(command.startswith("pip-audit ") for command in security_commands)
+
+
+def test_repository_maintenance_forms_and_dependabot_are_parseable() -> None:
+    dependabot = yaml.safe_load((ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8"))
+    assert {update["package-ecosystem"] for update in dependabot["updates"]} == {
+        "github-actions",
+        "pip",
+    }
+    issue_templates = ROOT / ".github" / "ISSUE_TEMPLATE"
+    for template in (issue_templates / "bug_report.yml", issue_templates / "feature_request.yml"):
+        form = yaml.safe_load(template.read_text(encoding="utf-8"))
+        assert form["name"]
+        assert form["description"]
+        assert form["body"]
 
 
 def test_comparison_smoke_accepts_expected_score_code(tmp_path: Path) -> None:

@@ -5,6 +5,16 @@ Changelog, and versions follow Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Least-privilege, SHA-pinned CI with Python 3.11-3.14 coverage, Bandit, pip-audit, Dependabot,
+  structured contribution templates, and explicit maintenance/support policies
+
+### Security
+
+- Rejected XML entities in pytest JUnit evidence and replaced optimization-sensitive execution
+  assertions with explicit runtime checks
+
 ## [0.2.0] - 2026-09-28
 
 ### Added

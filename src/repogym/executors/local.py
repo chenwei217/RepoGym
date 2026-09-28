@@ -63,11 +63,13 @@ def _capture_pipe(stream: BinaryIO, capture: _BoundedCapture) -> None:
 def _start_capture_threads(
     process: subprocess.Popen[bytes], stdout: _BoundedCapture, stderr: _BoundedCapture
 ) -> list[threading.Thread]:
-    assert process.stdout is not None
-    assert process.stderr is not None
+    stdout_pipe = process.stdout
+    stderr_pipe = process.stderr
+    if stdout_pipe is None or stderr_pipe is None:
+        raise RuntimeError("executor process was created without captured output pipes")
     threads = [
-        threading.Thread(target=_capture_pipe, args=(process.stdout, stdout), daemon=True),
-        threading.Thread(target=_capture_pipe, args=(process.stderr, stderr), daemon=True),
+        threading.Thread(target=_capture_pipe, args=(stdout_pipe, stdout), daemon=True),
+        threading.Thread(target=_capture_pipe, args=(stderr_pipe, stderr), daemon=True),
     ]
     for thread in threads:
         thread.start()

@@ -1,0 +1,40 @@
+name: Bug report
+description: Report reproducible incorrect behavior in RepoGym.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, private task contents, or unredacted local paths.
+  - type: input
+    id: version
+    attributes:
+      label: RepoGym version
+      description: Output from `repogym version` or the exact commit SHA.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [Windows, Linux, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the command, sanitized task configuration, and observed output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Include relevant doctor output after removing sensitive information.

@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Literal
+
+# Element is imported only for typing; runtime parsing uses defusedxml below.
+from xml.etree.ElementTree import Element  # nosec B405
+
+from defusedxml import ElementTree as ET
+from defusedxml.common import DefusedXmlException
 
 from repogym.commands import resolve_command
 from repogym.executors.base import CancellationToken, Executor
@@ -70,7 +75,7 @@ def _safe_failure_summary(text: str, roots: list[Path]) -> str:
     return summary
 
 
-def _test_case_id(element: ET.Element, roots: list[Path]) -> str:
+def _test_case_id(element: Element, roots: list[Path]) -> str:
     classname = element.attrib.get("classname") or element.attrib.get("file") or "pytest"
     name = element.attrib.get("name") or "unnamed"
     return redact_sensitive_text(f"{classname}::{name}", roots).replace("\\", "/")
@@ -82,7 +87,9 @@ def parse_pytest_junit(path: Path, workspace: Path) -> TestCaseEvidence:
         return TestCaseEvidence.unavailable("structured_output_missing")
     try:
         root = ET.parse(path).getroot()
-    except (OSError, ET.ParseError):
+    except (OSError, ET.ParseError, DefusedXmlException):
+        return TestCaseEvidence.unavailable("structured_output_invalid")
+    if root is None:
         return TestCaseEvidence.unavailable("structured_output_invalid")
     pending: list[
         tuple[

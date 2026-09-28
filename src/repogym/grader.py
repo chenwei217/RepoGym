@@ -171,8 +171,8 @@ def _grade_validated(
             all_counts = TestCounts(passed=0, failed=expected_total, total=expected_total)
             status: Literal["completed", "timed_out", "cancelled", "error"] = "cancelled"
         else:
-            assert public_result is not None
-            assert quality is not None
+            if public_result is None or quality is None:
+                raise RuntimeError("grading stages completed without required scoring evidence")
             public_counts = parse_test_counts(public_result)
             dimensions = {
                 "correctness": score_correctness(task, all_counts),

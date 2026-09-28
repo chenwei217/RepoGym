@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import re
-import xml.etree.ElementTree as ET
+
+# This module creates XML and never parses untrusted XML.
+import xml.etree.ElementTree as ET  # nosec B405
 from pathlib import Path
 from typing import Any, Literal
 
