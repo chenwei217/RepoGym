@@ -16,6 +16,7 @@ from typing import Any
 
 from repogym.exceptions import SecurityError
 from repogym.models import TaskSpec
+from repogym.privacy import REDACTED, redact_credentials, sensitive_key
 
 MAX_SUBMISSION_FILE_BYTES = 5 * 1024 * 1024
 WINDOWS_ABSOLUTE_PATH = re.compile(r"(?i)(?<![\w>])(?:[a-z]:[\\/]|\\\\)[^\s\"'<>]*")
@@ -236,7 +237,7 @@ def changed_paths(before: dict[str, str], after: dict[str, str]) -> list[str]:
 
 def redact_sensitive_text(text: str, sensitive_roots: Iterable[Path | str] = ()) -> str:
     """Redact known workspaces and otherwise recognizable absolute filesystem paths."""
-    redacted = text
+    redacted = redact_credentials(text)
     variants: set[str] = set()
     for root in sensitive_roots:
         value = str(root).rstrip("\\/")
@@ -268,7 +269,12 @@ def redact_value(value: Any, sensitive_roots: Iterable[Path | str] = ()) -> Any:
     if isinstance(value, list):
         return [redact_value(item, roots) for item in value]
     if isinstance(value, dict):
-        return {key: redact_value(item, roots) for key, item in value.items()}
+        return {
+            key: REDACTED
+            if isinstance(key, str) and sensitive_key(key)
+            else redact_value(item, roots)
+            for key, item in value.items()
+        }
     return value
 
 

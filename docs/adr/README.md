@@ -25,3 +25,4 @@ feature documentation.
 - [0014: Optional container isolation executor](0014-optional-container-executor.md)
 - [0015: CI-gated releases](0015-ci-gated-release-automation.md)
 - [0016: Queryable run history](0016-queryable-run-history.md)
+- [0017: Shared credential filtering](0017-shared-credential-redaction.md)

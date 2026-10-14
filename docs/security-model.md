@@ -1,5 +1,10 @@
 # Security model
 
+Diagnostic privacy uses the shared credential filter in `privacy.py` before filesystem path
+redaction. New runs and report replay apply it to text and structured credential keys. Truncated
+private-key blocks are removed through the end of the captured text. This is a best-effort filter,
+not proof that arbitrary untrusted output is secret-free; avoid exposing credentials to tasks.
+
 ## Trust boundary
 
 RepoGym treats task metadata, paths, and submission file trees as untrusted data, but the MVP

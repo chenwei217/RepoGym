@@ -28,8 +28,6 @@ COUNT_PATTERNS = {
     "failed": re.compile(r"(\d+) failed"),
     "errors": re.compile(r"(\d+) errors?"),
 }
-_CREDENTIAL_VALUE = re.compile(r"(?i)\b(api[_-]?key|token|password|secret)\b(\s*[:=]\s*)([^\s,;]+)")
-_BEARER_VALUE = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+")
 _LONG_OPAQUE_VALUE = re.compile(
     r"(?<![\w])(?=[A-Za-z0-9._-]{24,}(?![\w]))[A-Za-z0-9._-]*[0-9][A-Za-z0-9._-]*"
 )
@@ -67,8 +65,6 @@ def _is_pytest_command(command: list[str]) -> bool:
 def _safe_failure_summary(text: str, roots: list[Path]) -> str:
     summary = " ".join(text.split())
     summary = redact_sensitive_text(summary, roots)
-    summary = _CREDENTIAL_VALUE.sub(r"\1\2<REDACTED>", summary)
-    summary = _BEARER_VALUE.sub("Bearer <REDACTED>", summary)
     summary = _LONG_OPAQUE_VALUE.sub("<REDACTED>", summary)
     if len(summary) > _FAILURE_SUMMARY_LIMIT:
         summary = summary[: _FAILURE_SUMMARY_LIMIT - 3] + "..."

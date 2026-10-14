@@ -11,6 +11,11 @@ be used to reproduce a report but are not guaranteed to receive backports.
 
 ## Reporting
 
+Captured diagnostics and report replay apply shared best-effort credential filtering for labeled
+secrets, authentication headers, URL passwords, and private-key blocks. Unknown or unlabeled
+secrets may remain; tasks must not print credentials. RepoGym does not enumerate environment
+variable values to discover secrets. See `docs/adr/0017-shared-credential-redaction.md`.
+
 For suspected vulnerabilities, avoid a public issue until maintainers have assessed the report.
 Private vulnerability reporting is not available for this private repository on its current GitHub
 plan. Use the repository owner's GitHub profile to establish a private contact channel before

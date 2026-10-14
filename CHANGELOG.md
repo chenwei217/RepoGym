@@ -5,6 +5,9 @@ Changelog, and versions follow Semantic Versioning.
 
 ## [Unreleased]
 
+- Applied shared credential filtering to captured diagnostics, structured values, and legacy report
+  replay, including authentication headers, labeled secrets, URL passwords, and private-key blocks.
+
 - Added searchable run history with transactional rebuilds, legacy compatibility, and coded
   invalid-artifact diagnostics (`runs refresh`, `runs list`, `runs show`).
 

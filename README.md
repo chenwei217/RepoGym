@@ -330,6 +330,10 @@ executable paths, environment variables, usernames, hostnames, process IDs, and 
 inventories. The same object is persisted in new result and metadata files and rendered in
 terminal and HTML reports.
 
+Diagnostic text uses shared best-effort credential filtering on persistence and replay. Labeled
+secrets, authentication values, URL passwords, and private-key blocks are redacted; arbitrary
+unlabeled secrets still require prevention in task code.
+
 Detailed workflows: [CLI reference](docs/cli.md),
 [reproducibility](docs/reproducibility.md), [run comparison](docs/run-comparison.md),
 [task bundles](docs/task-bundles.md), [execution backends](docs/executors.md),
