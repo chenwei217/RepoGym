@@ -59,12 +59,18 @@ def validate_contents(manifest: RunArchiveManifest, contents: dict[str, bytes]) 
                 "schema_version",
                 "created_at",
                 "task_fingerprint",
+                "candidate_fingerprint",
             }:
                 raise ArchiveError("Unsupported archived metadata")
             if metadata.get("schema_version") != 1:
                 raise ArchiveError("Unsupported archived metadata version")
             if metadata.get("task_fingerprint") != result.task_fingerprint:
                 raise ArchiveError("Metadata fingerprint does not match result")
+            if (
+                "candidate_fingerprint" in metadata
+                and metadata["candidate_fingerprint"] != result.candidate_fingerprint
+            ):
+                raise ArchiveError("Metadata candidate identity does not match result")
             if metadata.get("created_at") is not None:
                 created_at = datetime.fromisoformat(metadata["created_at"])
         RunSummary(
@@ -94,6 +100,11 @@ def validate_contents(manifest: RunArchiveManifest, contents: dict[str, bytes]) 
             for record in evidence.records:
                 if record.task_id != result.task_id:
                     raise ArchiveError("Evidence record belongs to a different task")
+                if (
+                    record.source == "candidate_manifest"
+                    and record.details.get("sha256") != result.candidate_fingerprint
+                ):
+                    raise ArchiveError("Evidence candidate identity does not match result")
                 if record.kind == "artifact" and record.source in {"stdout.txt", "stderr.txt"}:
                     content = contents[record.source]
                     if record.details.get("sha256") != hashlib.sha256(

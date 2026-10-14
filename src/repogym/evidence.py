@@ -59,6 +59,18 @@ def build_evidence(
 ) -> EvidenceDocument:
     """Build a deterministically ordered evidence document from sanitized values."""
     records: list[EvidenceRecord] = []
+    if result.candidate_fingerprint is not None:
+        records.append(
+            EvidenceRecord(
+                kind="artifact",
+                source="candidate_manifest",
+                observed_at=observed_at,
+                status="info",
+                summary="Prepared candidate content identity",
+                task_id=result.task_id,
+                details={"schema_version": 1, "sha256": result.candidate_fingerprint},
+            )
+        )
     execution = result.execution
     if execution is not None:
         command_status: Literal["failed", "passed", "warning"] = (

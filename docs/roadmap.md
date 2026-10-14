@@ -31,6 +31,11 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 
 ## Completed roadmap items
 
+- Derived run history, verified portable run archives, and fingerprint-pinned local catalogs now
+  support finding, moving, and curating evaluation artifacts without executing task code.
+- Repeated-run analysis groups equal task/candidate/environment identities and distinguishes
+  missing data, cache replays, observed test variation, and incomplete duration measurements.
+
 - TaskSpec schema version 1 is explicit; unversioned and v0 definitions migrate in memory, and
   unknown versions fail with stable compatibility errors.
 - Local execution drains stdout and stderr into independently configurable bounded buffers while

@@ -3,11 +3,25 @@
 from __future__ import annotations
 
 import hashlib
+import json
+from collections.abc import Mapping
 from pathlib import Path
 
 from repogym.exceptions import FingerprintError, SecurityError
 from repogym.models import TaskSpec
 from repogym.security import safe_join
+
+CANDIDATE_IDENTITY_VERSION = 1
+
+
+def candidate_fingerprint(manifest: Mapping[str, str]) -> str:
+    """Identify prepared workspace paths/content before task test injection."""
+    encoded = json.dumps(
+        {"schema_version": CANDIDATE_IDENTITY_VERSION, "files": dict(manifest)},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def normalize_fingerprint_path(path: str) -> str:

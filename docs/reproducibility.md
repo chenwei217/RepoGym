@@ -12,6 +12,11 @@ are upgraded in memory without rewriting their files; missing case data is marke
 
 ## Current guarantees
 
+New grades persist a candidate fingerprint of the prepared starter-plus-overlay manifest before
+tests are injected. The digest appears in result/metadata and a versioned `candidate_manifest`
+evidence record. `analyze` groups only equal task, candidate, and environment identities, explicitly
+excluding legacy missing identities and cache replays. See [Repeated-run analysis](repeat-run-analysis.md).
+
 Task catalogs curate a fixed input set. Generated batch jobs carry optional expected task
 fingerprints and reject drift before grading. See [Pinned task collections](task-catalogs.md).
 

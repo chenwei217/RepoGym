@@ -241,6 +241,7 @@ class RuntimeEnvironmentEvidence(StrictModel):
 class GradeResult(BaseModel):
     task_id: str
     task_fingerprint: str | None = None
+    candidate_fingerprint: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     run_id: str
     status: Literal["completed", "timed_out", "cancelled", "error"]
     score: float

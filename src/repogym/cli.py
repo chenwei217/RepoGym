@@ -16,6 +16,7 @@ from typer._click.exceptions import ClickException
 from typer.core import TyperGroup
 
 from repogym import __version__
+from repogym.analytics.cli import analyze
 from repogym.archives.cli import app as archive_app
 from repogym.authoring import lint_task, scaffold_task
 from repogym.batch import generate_batch_report, load_batch, run_batch
@@ -80,6 +81,7 @@ app.add_typer(batch_app, name="batch")
 app.add_typer(history_app, name="runs")
 app.add_typer(archive_app, name="archive")
 app.add_typer(catalog_app, name="catalog")
+app.command("analyze")(analyze)
 console = Console()
 error_console = Console(stderr=True)
 _debug = False

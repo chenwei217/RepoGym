@@ -2,6 +2,12 @@
 
 RepoGym uses a linear pipeline with small modules and explicit data models.
 
+`analytics` reads bounded result-only observations, groups equal task/candidate/environment
+identities, excludes ambiguous/replayed samples, computes descriptive statistics, and renders
+terminal/JSON/escaped HTML. Grading fingerprints the prepared file manifest before test injection;
+cache compatibility and archive validation preserve this optional identity without assuming it
+for historical data. See [Repeated-run analysis](repeat-run-analysis.md).
+
 `catalog` discovers and validates direct tasks, persists path-free pinned metadata, diagnoses
 drift, and plans relative batch manifests. Optional batch job fingerprints are checked before
 grading. Discovery, serialization, selection, and CLI are separate from execution backends.

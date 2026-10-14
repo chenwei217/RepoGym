@@ -18,6 +18,10 @@ The wheel includes `py.typed`, so type checkers can consume these inline annotat
 
 ## Change policy
 
+Run archive, catalog, and repeat-run analysis formats each use schema 1. New optional candidate
+fingerprints preserve legacy result loading; missing historical identity is explicitly unknown.
+Generated batch jobs may pin a task fingerprint without requiring it in existing schema-1 jobs.
+
 RepoGym follows semantic versioning. During the 0.x series, a minor release may refine a documented
 Python API, but persisted formats and CLI automation behavior require an explicit version or
 migration path. Deprecations should appear in the CHANGELOG and remain usable for at least one

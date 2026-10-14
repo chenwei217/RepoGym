@@ -14,6 +14,7 @@ from repogym.executors.local import LocalExecutor
 from repogym.models import RuntimeEnvironmentEvidence, RuntimeEnvironmentSnapshot
 
 DEPENDENCY_DISTRIBUTIONS = (
+    "defusedxml",
     "Jinja2",
     "psutil",
     "pydantic",

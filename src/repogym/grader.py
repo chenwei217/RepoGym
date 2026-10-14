@@ -25,7 +25,7 @@ from repogym.models import (
     TestCaseEvidence,
     TestCounts,
 )
-from repogym.reproducibility import task_fingerprint
+from repogym.reproducibility import candidate_fingerprint, task_fingerprint
 from repogym.scoring import score_correctness, score_quality, score_regression, score_scope
 from repogym.security import (
     audit_submission,
@@ -148,6 +148,7 @@ def _grade_validated(
         original = file_manifest(workspace)
         copy_tree_safe(submission.resolve(), workspace)
         submitted = file_manifest(workspace)
+        candidate_identity = candidate_fingerprint(submitted)
         changed = changed_paths(original, submitted)
         inject_tests(task_directory.resolve(), workspace)
         all_result = run_tests(task, workspace, runner, cancellation_token=cancellation_token)
@@ -219,6 +220,7 @@ def _grade_validated(
         result = GradeResult(
             task_id=task.id,
             task_fingerprint=fingerprint,
+            candidate_fingerprint=candidate_identity,
             run_id=run_id,
             status=status,
             score=max(0.0, min(100.0, score)),
@@ -249,6 +251,7 @@ def _grade_validated(
             "schema_version": 1,
             "created_at": created_at.isoformat(),
             "task_fingerprint": fingerprint,
+            "candidate_fingerprint": candidate_identity,
             "command": sanitize_command(all_result.command, sensitive_roots),
             "return_code": all_result.return_code,
             "timed_out": all_result.timed_out,

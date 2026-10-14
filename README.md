@@ -343,6 +343,10 @@ Detailed workflows: [CLI reference](docs/cli.md),
 
 ## Roadmap
 
+Inspect repeated executions with `repogym analyze RUN_A RUN_B --format json` or `--format html`.
+Analysis separates task/candidate/environment identities and excludes replayed timing samples.
+See [Repeated-run analysis](docs/repeat-run-analysis.md).
+
 Curate repeatable evaluation sets with `repogym catalog create`, `catalog verify`, and
 `catalog batch`. See [Pinned task collections](docs/task-catalogs.md).
 

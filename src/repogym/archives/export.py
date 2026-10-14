@@ -50,6 +50,7 @@ def _collect(run: Path) -> tuple[GradeResult, dict[str, bytes]]:
                 "schema_version": 1,
                 "created_at": metadata.get("created_at"),
                 "task_fingerprint": result.task_fingerprint,
+                "candidate_fingerprint": result.candidate_fingerprint,
             }
         )
     if "evidence.json" in contents:

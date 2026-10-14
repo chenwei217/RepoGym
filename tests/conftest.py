@@ -49,6 +49,38 @@ def run_archive(run_factory: Callable[..., Path], tmp_path: Path) -> Path:
 
 
 @pytest.fixture
+def analysis_factory(run_factory: Callable[..., Path]) -> Callable[..., Path]:
+    """Build comparable synthetic observations without reading the host environment."""
+    from repogym.models import RuntimeEnvironmentEvidence, RuntimeEnvironmentSnapshot
+
+    def create(run_id: str = "run-a", **changes: Any) -> Path:
+        snapshot = RuntimeEnvironmentSnapshot(
+            python_implementation="CPython",
+            python_version=changes.pop("python_version", "3.11.0"),
+            operating_system="test",
+            operating_system_release="test",
+            architecture="test",
+            dependencies={},
+            repogym_version="0.2.0",
+            executor="fixture",
+        )
+        environment = RuntimeEnvironmentEvidence(
+            availability="available",
+            snapshot=snapshot,
+            fingerprint=snapshot.fingerprint(),
+            reason="collected",
+        )
+        defaults: dict[str, Any] = {
+            "candidate_fingerprint": "b" * 64,
+            "environment": environment.model_dump(mode="json"),
+        }
+        defaults.update(changes)
+        return run_factory(run_id, **defaults)
+
+    return create
+
+
+@pytest.fixture
 def valid_task(tmp_path: Path) -> Path:
     task = tmp_path / "sample-task"
     (task / "starter" / "src").mkdir(parents=True)

@@ -44,6 +44,7 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 | `repogym catalog list CATALOG [--query TEXT] [--format terminal\|json]` | saved catalog | no | no |
 | `repogym catalog verify CATALOG [--tasks-dir DIR]` | pinned tasks | no | no |
 | `repogym catalog batch CATALOG OUTPUT --submissions-dir DIR` | catalog and candidate layout | no | pinned batch manifest |
+| `repogym analyze RUN... [--format terminal\|json\|html] [--include-cached]` | bounded persisted results | no | optional analysis report |
 
 `doctor` separates PASS, WARN, and FAIL checks and never starts the configured test command.
 `init-task` prompts for omitted ID/title unless `--non-interactive` is set, validates a staged

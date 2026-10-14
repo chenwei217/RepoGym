@@ -5,6 +5,10 @@ Changelog, and versions follow Semantic Versioning.
 
 ## [Unreleased]
 
+- Added comparable repeated-run analysis in terminal/JSON/HTML with candidate content identity,
+  replay exclusions, per-test variation, and measured-only timing distributions.
+- Extended runtime identity to include the direct `defusedxml` dependency.
+
 - Added portable pinned task catalogs, metadata filtering and drift diagnostics, and batch planning
   with execution-time task fingerprint checks while retaining legacy unpinned manifests.
 

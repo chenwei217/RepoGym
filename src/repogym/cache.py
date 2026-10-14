@@ -21,6 +21,7 @@ from repogym import __version__
 from repogym.commands import resolve_command
 from repogym.exceptions import CacheError
 from repogym.models import CacheEvidence, TaskSpec
+from repogym.reproducibility import CANDIDATE_IDENTITY_VERSION
 from repogym.security import file_manifest
 
 CACHE_SCHEMA_VERSION = 1
@@ -60,6 +61,7 @@ def build_cache_key(
     """Hash every task, input, command, runtime, and RepoGym compatibility input."""
     payload = {
         "schema_version": CACHE_SCHEMA_VERSION,
+        "candidate_identity_version": CANDIDATE_IDENTITY_VERSION,
         "repogym_version": __version__,
         "task_fingerprint": task_fingerprint,
         "submission_files": file_manifest(submission),

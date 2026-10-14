@@ -16,7 +16,7 @@ def test_current_archive_is_deterministic_private_and_replayable(
     run_factory: Callable[..., Path],
     tmp_path: Path,
 ) -> None:
-    run = run_factory()
+    run = run_factory(candidate_fingerprint="b" * 64)
     marker = "fixture" + "credential42"
     (run / "stdout.txt").write_text(f"api_key={marker} at /home/unit/private.py", encoding="utf-8")
     result, stdout, stderr = load_run(run)
