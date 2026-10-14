@@ -76,7 +76,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
   when the runner lacks link-creation privileges.
 - Plugin contracts have unit and CLI integration coverage; independently packaged fixture wheels
   are not yet built and installed in CI.
-- Batch execution is sequential by design; controlled parallel scheduling has not been specified.
+- Batch scheduling now has bounded opt-in parallelism, shared cancellation, and per-pair ordering;
+  recoverable incremental batch checkpoints/resume are not yet implemented.
 - Language-specific structured adapters beyond pytest are not yet implemented.
 - Core tests need no network after dependencies are installed. A fresh editable installation does
   require package retrieval unless a local wheelhouse is supplied.

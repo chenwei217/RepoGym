@@ -73,9 +73,11 @@ plugins implicitly.
 
 Batch schema version 1 separates orchestration from individual grading. Paths resolve relative to
 the manifest, but the persisted model stores job IDs and sanitized result snapshots rather than
-source paths. Lexical job ordering makes manifest order irrelevant and gives duplicate
-task/submission pairs deterministic cache ownership. Each job is attempted sequentially and maps
-to the existing exit-code contract; a fixed severity table produces the aggregate code. Report
+source paths. Lexical result ordering makes manifest order irrelevant. A single worker remains the
+default; opt-in bounded workers serialize identical resolved task/submission pairs and execute
+independent groups concurrently. A shared token cancels queued and active grading, and a versioned
+schedule sidecar records the worker policy. Each job maps to the existing exit-code contract;
+a fixed severity table produces the aggregate code. Report
 replay reads only `batch.json`. JUnit models each job as one testcase with underlying counts in
 properties, while SARIF merges violations and explicit non-success outcomes.
 

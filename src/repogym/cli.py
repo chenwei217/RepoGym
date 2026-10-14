@@ -492,6 +492,9 @@ def _emit_batch_report(
 @batch_app.command("run")
 def run_batch_command(
     manifest: Annotated[Path, typer.Argument(help="Versioned YAML batch manifest.")],
+    workers: Annotated[
+        int, typer.Option("--workers", min=1, max=32, help="Maximum independent grading groups.")
+    ] = 1,
     format_name: Annotated[
         Literal["terminal", "json", "junit", "sarif"],
         typer.Option("--format", help="Summary format."),
@@ -515,9 +518,15 @@ def run_batch_command(
             output_root=batches_dir,
             runs_root=runs_dir,
             cache_root=None if no_cache else cache_dir,
+            max_workers=workers,
         )
         batch = load_batch(batch_directory)
         _emit_batch_report(batch_directory, format_name, output)
+    except KeyboardInterrupt:
+        _fail(
+            ExecutionError("Batch cancelled; active processes were asked to stop"),
+            ExitCode.EXECUTION_FAILED,
+        )
     except BatchError as exc:
         _fail(exc, ExitCode.TASK_INVALID)
     except RepoGymError as exc:

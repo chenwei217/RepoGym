@@ -28,12 +28,14 @@ from repogym.exceptions import (
     RepoGymError,
     ReportError,
 )
+from repogym.executors import CancellationToken
 from repogym.exit_codes import ExitCode
 from repogym.grader import grade_submission
 from repogym.loader import load_task
 from repogym.models import GradeResult, StrictModel
 from repogym.reports import load_run, render_sarif
 from repogym.reproducibility import task_fingerprint
+from repogym.scheduling import MAX_WORKERS, run_groups
 from repogym.security import redact_sensitive_text, redact_value
 
 BATCH_SCHEMA_VERSION = 1
@@ -151,7 +153,10 @@ def load_batch_manifest(path: Path) -> BatchManifest:
 
 def _resolve_job_path(base: Path, configured: str) -> Path:
     path = Path(configured)
-    return path.resolve() if path.is_absolute() else (base / path).resolve()
+    try:
+        return path.resolve() if path.is_absolute() else (base / path).resolve()
+    except (OSError, RuntimeError) as exc:
+        raise ReportError("Cannot resolve batch input path") from exc
 
 
 def _new_batch_id() -> str:
@@ -212,59 +217,82 @@ def _failed_job(
     )
 
 
+def _run_job(
+    job: BatchJobSpec,
+    base: Path,
+    runs_root: Path,
+    cache_root: Path | None,
+    token: CancellationToken,
+) -> BatchJobResult:
+    roots: tuple[Path, ...] = (Path.cwd().resolve(), base)
+    if token.cancelled:
+        return _failed_job(
+            job.id,
+            "execution_failed",
+            ExitCode.EXECUTION_FAILED,
+            ExecutionError("Batch cancelled before job started"),
+            roots,
+        )
+    try:
+        task = _resolve_job_path(base, job.task)
+        submission = _resolve_job_path(base, job.submission)
+        roots = (Path.cwd().resolve(), base, task, submission)
+        if job.task_fingerprint is not None:
+            actual = task_fingerprint(task, load_task(task))
+            if actual != job.task_fingerprint:
+                raise BatchError("Pinned task fingerprint mismatch; execution refused")
+        run_directory = grade_submission(
+            task, submission, output_root=runs_root, cache_root=cache_root, cancellation_token=token
+        )
+        result, _, _ = load_run(run_directory)
+    except ExecutionError as exc:
+        return _failed_job(job.id, "execution_failed", ExitCode.EXECUTION_FAILED, exc, roots)
+    except (CacheError, ReportError, OSError) as exc:
+        return _failed_job(job.id, "environment_error", ExitCode.ENVIRONMENT_ERROR, exc, roots)
+    except RepoGymError as exc:
+        return _failed_job(job.id, "task_invalid", ExitCode.TASK_INVALID, exc, roots)
+    except Exception as exc:
+        return _failed_job(job.id, "internal_error", ExitCode.INTERNAL_ERROR, exc, roots)
+    return _job_from_result(job.id, result)
+
+
 def run_batch(
     manifest_path: Path,
     output_root: Path = Path(".repogym/batches"),
     runs_root: Path = Path(".repogym/runs"),
     cache_root: Path | None = Path(".repogym/cache"),
+    *,
+    max_workers: int = 1,
+    cancellation_token: CancellationToken | None = None,
 ) -> Path:
-    """Grade every manifest job in stable ID order and persist one replayable result."""
+    """Grade bounded independent groups and persist results in lexical job order."""
+    if type(max_workers) is not int or not 1 <= max_workers <= MAX_WORKERS:
+        raise BatchError(f"workers must be an integer between 1 and {MAX_WORKERS}")
     manifest_file = manifest_path.resolve()
     manifest = load_batch_manifest(manifest_file)
     base = manifest_file.parent
-    jobs: list[BatchJobResult] = []
-    for job in sorted(manifest.jobs, key=lambda item: item.id):
-        task = _resolve_job_path(base, job.task)
-        submission = _resolve_job_path(base, job.submission)
-        roots = (Path.cwd().resolve(), base, task, submission)
-        try:
-            if job.task_fingerprint is not None:
-                actual = task_fingerprint(task, load_task(task))
-                if actual != job.task_fingerprint:
-                    raise BatchError("Pinned task fingerprint mismatch; execution refused")
-            run_directory = grade_submission(
-                task,
-                submission,
-                output_root=runs_root,
-                cache_root=cache_root,
-            )
-            result, _, _ = load_run(run_directory)
-        except ExecutionError as exc:
-            jobs.append(
-                _failed_job(
-                    job.id,
-                    "execution_failed",
-                    ExitCode.EXECUTION_FAILED,
-                    exc,
-                    roots,
-                )
-            )
-        except (CacheError, ReportError, OSError) as exc:
-            jobs.append(
-                _failed_job(
-                    job.id,
-                    "environment_error",
-                    ExitCode.ENVIRONMENT_ERROR,
-                    exc,
-                    roots,
-                )
-            )
-        except RepoGymError as exc:
-            jobs.append(_failed_job(job.id, "task_invalid", ExitCode.TASK_INVALID, exc, roots))
-        except Exception as exc:
-            jobs.append(_failed_job(job.id, "internal_error", ExitCode.INTERNAL_ERROR, exc, roots))
-        else:
-            jobs.append(_job_from_result(job.id, result))
+    ordered = sorted(manifest.jobs, key=lambda item: item.id)
+    token = cancellation_token or CancellationToken()
+    groups: list[list[BatchJobSpec]]
+    if max_workers == 1:
+        groups = [[job] for job in ordered]
+    else:
+        by_pair: dict[tuple[Path, Path], list[BatchJobSpec]] = {}
+        for job in ordered:
+            try:
+                key = (_resolve_job_path(base, job.task), _resolve_job_path(base, job.submission))
+            except ReportError:
+                key = (base / job.id, base / job.id)
+            by_pair.setdefault(key, []).append(job)
+        groups = list(by_pair.values())
+
+    def grade_job(job: BatchJobSpec) -> BatchJobResult:
+        return _run_job(job, base, runs_root, cache_root, token)
+
+    jobs = sorted(
+        run_groups(groups, grade_job, max_workers=max_workers, cancellation_token=token),
+        key=lambda item: item.id,
+    )
 
     batch_id = _new_batch_id()
     batch = BatchResult(
@@ -274,6 +302,17 @@ def run_batch(
     )
     batch_directory = output_root.resolve() / batch_id
     batch_directory.mkdir(parents=True, exist_ok=False)
+    _atomic_write_json(
+        batch_directory / "schedule.json",
+        {
+            "schema_version": 1,
+            "max_workers": max_workers,
+            "group_count": len(groups),
+            "same_pair_policy": "serial",
+            "result_order": "job_id",
+            "cancellation_requested": token.cancelled,
+        },
+    )
     _atomic_write_json(batch_directory / "batch.json", batch.model_dump(mode="json"))
     return batch_directory
 

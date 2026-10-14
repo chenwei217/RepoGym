@@ -101,7 +101,7 @@ def grade_submission(
     )
     cache = ExecutionCache(cache_root)
     lock_timeout = max(30, task.execution.timeout_seconds * 3 + 30)
-    with cache.lock(key, timeout_seconds=lock_timeout):
+    with cache.lock(key, timeout_seconds=lock_timeout, cancellation_token=cancellation_token):
         run_id = _new_run_id()
         restored = cache.restore(key, output_root, run_id)
         if restored is not None:

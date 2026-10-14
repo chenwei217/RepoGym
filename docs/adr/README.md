@@ -29,3 +29,4 @@ feature documentation.
 - [0018: Portable run archives](0018-portable-run-archives.md)
 - [0019: Pinned local task catalogs](0019-pinned-task-catalogs.md)
 - [0020: Comparable repeated-run analysis](0020-repeat-run-stability-analysis.md)
+- [0021: Bounded parallel batch evaluation](0021-bounded-parallel-batches.md)

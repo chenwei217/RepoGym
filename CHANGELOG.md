@@ -5,6 +5,9 @@ Changelog, and versions follow Semantic Versioning.
 
 ## [Unreleased]
 
+- Added bounded opt-in parallel batch workers, deterministic pair ordering, shared process
+  cancellation, isolated path failures, and versioned scheduling policy evidence.
+
 - Added comparable repeated-run analysis in terminal/JSON/HTML with candidate content identity,
   replay exclusions, per-test variation, and measured-only timing distributions.
 - Extended runtime identity to include the direct `defusedxml` dependency.

@@ -54,8 +54,9 @@ task fingerprint before publishing the task. See [Task bundles](task-bundles.md)
 - `reference/solution.patch`.
 
 Each entry contributes its normalized `/`-separated relative path and exact bytes, both prefixed
-with their lengths. Entries are sorted by normalized path. Absolute paths, mtimes, directory
-enumeration order, caches, and generated run artifacts do not participate. Missing required
+with their lengths. Entries are sorted by normalized path. Absolute paths, mtimes, and directory
+enumeration order do not participate. Files outside the required roots, including normal RepoGym
+run/cache directories, are excluded; files placed inside an input root are fingerprinted. Missing required
 inputs and symbolic links are errors rather than silently producing a partial identity.
 
 The full digest appears in `verify` and `doctor` output and in both `metadata.json` and
@@ -68,7 +69,9 @@ implementation, OS and machine identity, and RepoGym version. The canonical JSON
 with SHA-256; only the digest is persisted in the cache manifest. A hit replays sanitized evidence
 into a new run directory and records the original source run ID rather than claiming re-execution.
 
-Batch manifest order is not an execution input. RepoGym sorts unique job IDs before grading and
-persists them in that order; duplicate task/submission pairs are allowed, with the first sorted job
-populating the cache and later matches replaying it under distinct run IDs. `batch report` consumes
+Batch manifest order is not an execution input. RepoGym sorts unique job IDs before grouping and
+persists them in that order. One worker preserves global lexical execution order. Parallel workers
+serialize identical resolved task/submission pairs, with the first sorted job in each pair
+populating the cache and later matches replaying it under distinct run IDs. Independent content
+aliases can race for the cache miss; each replay still records its actual source. `batch report` consumes
 only the saved `batch.json`, so rendering never changes task state or reruns a candidate.

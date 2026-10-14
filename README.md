@@ -341,7 +341,11 @@ Detailed workflows: [CLI reference](docs/cli.md),
 [compatibility policy](docs/compatibility.md), [release process](docs/releasing.md), and
 [project milestones](docs/milestones.md).
 
-## Roadmap
+## Evaluation workflows
+
+Run independent batch jobs with `repogym batch run examples/batch.yaml --workers 4`.
+The default remains one worker. See [Batch evaluation](docs/batch-evaluation.md) for bounds,
+cache ownership, cancellation, and the recorded scheduling policy.
 
 Inspect repeated executions with `repogym analyze RUN_A RUN_B --format json` or `--format html`.
 Analysis separates task/candidate/environment identities and excludes replayed timing samples.
@@ -356,7 +360,9 @@ Archives support integrity-checked offline report replay. See [Run archives](doc
 Run inventories can be rebuilt and searched with `repogym runs refresh`, `repogym runs list`,
 and `repogym runs show`. See [Run history](docs/run-history.md) for filters and legacy behavior.
 
-The following capabilities are planned and are not present in the MVP:
+## Roadmap
+
+The following capabilities are planned:
 
 - GitHub issue importer
 - coding-agent adapters

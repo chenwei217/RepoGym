@@ -19,7 +19,8 @@ from typing import Any
 
 from repogym import __version__
 from repogym.commands import resolve_command
-from repogym.exceptions import CacheError
+from repogym.exceptions import CacheError, ExecutionError
+from repogym.executors.base import CancellationToken
 from repogym.models import CacheEvidence, TaskSpec
 from repogym.reproducibility import CANDIDATE_IDENTITY_VERSION
 from repogym.security import file_manifest
@@ -104,6 +105,7 @@ class ExecutionCache:
         key: str,
         timeout_seconds: float = 30,
         stale_after_seconds: float = 3600,
+        cancellation_token: CancellationToken | None = None,
     ) -> Iterator[None]:
         """Acquire a portable exclusive file lock for one cache key."""
         self._validate_key(key)
@@ -113,6 +115,8 @@ class ExecutionCache:
         deadline = time.monotonic() + timeout_seconds
         descriptor: int | None = None
         while descriptor is None:
+            if cancellation_token is not None and cancellation_token.cancelled:
+                raise ExecutionError("Cancelled while waiting for the execution cache")
             try:
                 descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             except FileExistsError:
@@ -126,7 +130,10 @@ class ExecutionCache:
                     continue
                 if time.monotonic() >= deadline:
                     raise CacheError(f"Timed out waiting for cache key {key}") from None
-                time.sleep(0.05)
+                if cancellation_token is None:
+                    time.sleep(0.05)
+                else:
+                    cancellation_token.wait(0.05)
         try:
             payload = json.dumps(
                 {"owner": owner, "pid": os.getpid(), "created_at": time.time()}
