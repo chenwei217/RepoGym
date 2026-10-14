@@ -5,6 +5,9 @@ Changelog, and versions follow Semantic Versioning.
 
 ## [Unreleased]
 
+- Added searchable run history with transactional rebuilds, legacy compatibility, and coded
+  invalid-artifact diagnostics (`runs refresh`, `runs list`, `runs show`).
+
 ### Added
 
 - Least-privilege, SHA-pinned CI with Python 3.11-3.14 coverage, Bandit, pip-audit, Dependabot,

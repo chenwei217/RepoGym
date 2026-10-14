@@ -1,8 +1,42 @@
 from __future__ import annotations
 
+import json
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
+
+
+@pytest.fixture
+def run_factory(tmp_path: Path) -> Callable[..., Path]:
+    """Create persisted legacy-compatible runs without executing candidate code."""
+
+    def create(run_id: str = "run-a", **changes: Any) -> Path:
+        directory = tmp_path / "runs" / run_id
+        directory.mkdir(parents=True)
+        result = {
+            "task_id": "sample-task",
+            "task_fingerprint": "a" * 64,
+            "run_id": run_id,
+            "status": "completed",
+            "score": 100,
+            "dimensions": {},
+            "tests": {"passed": 2, "failed": 0, "total": 2},
+            "violations": [],
+            "duration_seconds": 1.0,
+        }
+        created_at = changes.pop("created_at", "2026-01-01T00:00:00+00:00")
+        result.update(changes)
+        (directory / "result.json").write_text(json.dumps(result), encoding="utf-8")
+        (directory / "metadata.json").write_text(
+            json.dumps({"created_at": created_at}), encoding="utf-8"
+        )
+        for name in ("stdout.txt", "stderr.txt"):
+            (directory / name).write_text("", encoding="utf-8")
+        return directory
+
+    return create
 
 
 @pytest.fixture

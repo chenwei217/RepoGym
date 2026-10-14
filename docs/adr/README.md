@@ -23,3 +23,5 @@ feature documentation.
 - [0012: Comparable runtime environments](0012-comparable-runtime-environments.md)
 - [0013: Atomic task scaffolding and author lint](0013-task-authoring-workflow.md)
 - [0014: Optional container isolation executor](0014-optional-container-executor.md)
+- [0015: CI-gated releases](0015-ci-gated-release-automation.md)
+- [0016: Queryable run history](0016-queryable-run-history.md)

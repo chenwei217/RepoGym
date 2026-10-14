@@ -20,7 +20,8 @@ This roadmap records audited facts and prioritized work. It is not a release pro
 - deterministic batch evaluation with failure continuation, cache reuse, replayable artifacts,
   four summary formats, and stable aggregate exit codes;
 - deterministic comparison of persisted runs; and
-- Windows and Ubuntu CI on Python 3.11 and 3.12, with an 85% branch-coverage floor.
+- Windows and Ubuntu CI on Python 3.11–3.14, with an 85% branch-coverage floor;
+- a rebuildable transactional run inventory with filters, pagination, and stale-source checks.
 
 ## Confirmed gaps and technical debt
 

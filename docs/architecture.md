@@ -2,6 +2,10 @@
 
 RepoGym uses a linear pipeline with small modules and explicit data models.
 
+`history` adds a derived SQLite inventory over persisted runs: bounded scanning, allowlisted
+versioned summaries, transactional rebuilds, filtered queries, and source-digest checks. Grading
+does not depend on the index. See [Run history](run-history.md).
+
 1. `loader` migrates versioned task mappings and parses them into strict Pydantic models.
 2. `validator` checks layout, safe relative paths, test discovery, and constraint overlap.
    `authoring` builds tasks in same-filesystem staging directories, validates before atomic

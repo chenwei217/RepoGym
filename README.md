@@ -339,6 +339,9 @@ Detailed workflows: [CLI reference](docs/cli.md),
 
 ## Roadmap
 
+Run inventories can be rebuilt and searched with `repogym runs refresh`, `repogym runs list`,
+and `repogym runs show`. See [Run history](docs/run-history.md) for filters and legacy behavior.
+
 The following capabilities are planned and are not present in the MVP:
 
 - GitHub issue importer

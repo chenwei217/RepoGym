@@ -35,6 +35,7 @@ from repogym.executors import DockerExecutor, LocalExecutor, executor_capabiliti
 from repogym.executors.base import Executor
 from repogym.exit_codes import ExitCode
 from repogym.grader import grade_submission
+from repogym.history.cli import app as history_app
 from repogym.loader import load_task
 from repogym.plugins import discover_plugins
 from repogym.reports import generate_report, load_run, render_terminal
@@ -74,6 +75,7 @@ batch_app = typer.Typer(help="Run and replay deterministic multi-task evaluation
 app.add_typer(bundle_app, name="bundle")
 app.add_typer(cache_app, name="cache")
 app.add_typer(batch_app, name="batch")
+app.add_typer(history_app, name="runs")
 console = Console()
 error_console = Console(stderr=True)
 _debug = False

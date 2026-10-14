@@ -34,6 +34,9 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 | `repogym batch run MANIFEST [--format FORMAT]` | manifest, tasks, submissions, cache | candidate and tests on cache miss | individual runs, cache, and `batch.json` |
 | `repogym batch report BATCH_RUN [--format FORMAT]` | persisted `batch.json` | no | optional output file |
 | `repogym version` | package metadata | no | no |
+| `repogym runs refresh [--runs-dir DIR]` | persisted run summaries | no | transactional SQLite index |
+| `repogym runs list [--task ID] [--status STATUS] [--format terminal\|json]` | run index | no | no |
+| `repogym runs show RUN_ID` | index and matching source result | no | no |
 
 `doctor` separates PASS, WARN, and FAIL checks and never starts the configured test command.
 `init-task` prompts for omitted ID/title unless `--non-interactive` is set, validates a staged
