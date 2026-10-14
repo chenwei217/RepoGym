@@ -5,6 +5,9 @@ Changelog, and versions follow Semantic Versioning.
 
 ## [Unreleased]
 
+- Added deterministic, sanitized run archives with bounded integrity verification, evidence
+  association checks, exclusive atomic import, and offline report replay.
+
 - Applied shared credential filtering to captured diagnostics, structured values, and legacy report
   replay, including authentication headers, labeled secrets, URL passwords, and private-key blocks.
 

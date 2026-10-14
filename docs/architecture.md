@@ -2,6 +2,10 @@
 
 RepoGym uses a linear pipeline with small modules and explicit data models.
 
+`archives` transfers execution evidence independently of task bundles. A flat versioned manifest
+binds artifacts to a run/task identity; import validates bytes, model associations, and privacy
+before exclusive atomic publication. Existing report and history APIs consume imported runs.
+
 `history` adds a derived SQLite inventory over persisted runs: bounded scanning, allowlisted
 versioned summaries, transactional rebuilds, filtered queries, and source-digest checks. Grading
 does not depend on the index. See [Run history](run-history.md).

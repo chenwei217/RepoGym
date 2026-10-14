@@ -37,6 +37,9 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 | `repogym runs refresh [--runs-dir DIR]` | persisted run summaries | no | transactional SQLite index |
 | `repogym runs list [--task ID] [--status STATUS] [--format terminal\|json]` | run index | no | no |
 | `repogym runs show RUN_ID` | index and matching source result | no | no |
+| `repogym archive export RUN OUTPUT` | sanitized run artifacts | no | new ZIP archive |
+| `repogym archive verify ARCHIVE` | complete archive | no | no |
+| `repogym archive import ARCHIVE --destination DIR` | verified archive | no | new run directory |
 
 `doctor` separates PASS, WARN, and FAIL checks and never starts the configured test command.
 `init-task` prompts for omitted ID/title unless `--non-interactive` is set, validates a staged

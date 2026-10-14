@@ -343,6 +343,9 @@ Detailed workflows: [CLI reference](docs/cli.md),
 
 ## Roadmap
 
+Move execution evidence with `repogym archive export`, `archive verify`, and `archive import`.
+Archives support integrity-checked offline report replay. See [Run archives](docs/run-archives.md).
+
 Run inventories can be rebuilt and searched with `repogym runs refresh`, `repogym runs list`,
 and `repogym runs show`. See [Run history](docs/run-history.md) for filters and legacy behavior.
 

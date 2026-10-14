@@ -40,6 +40,15 @@ def run_factory(tmp_path: Path) -> Callable[..., Path]:
 
 
 @pytest.fixture
+def run_archive(run_factory: Callable[..., Path], tmp_path: Path) -> Path:
+    from repogym.archives import export_run_archive
+
+    path = tmp_path / "run.zip"
+    export_run_archive(run_factory(), path)
+    return path
+
+
+@pytest.fixture
 def valid_task(tmp_path: Path) -> Path:
     task = tmp_path / "sample-task"
     (task / "starter" / "src").mkdir(parents=True)
