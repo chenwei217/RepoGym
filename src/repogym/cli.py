@@ -21,6 +21,7 @@ from repogym.authoring import lint_task, scaffold_task
 from repogym.batch import generate_batch_report, load_batch, run_batch
 from repogym.bundles import export_task_bundle, import_task_bundle
 from repogym.cache import ExecutionCache
+from repogym.catalog.cli import app as catalog_app
 from repogym.comparison import generate_comparison
 from repogym.doctor import diagnose_task
 from repogym.environment import collect_runtime_environment, render_environment_terminal
@@ -78,6 +79,7 @@ app.add_typer(cache_app, name="cache")
 app.add_typer(batch_app, name="batch")
 app.add_typer(history_app, name="runs")
 app.add_typer(archive_app, name="archive")
+app.add_typer(catalog_app, name="catalog")
 console = Console()
 error_console = Console(stderr=True)
 _debug = False

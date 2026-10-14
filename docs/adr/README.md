@@ -27,3 +27,4 @@ feature documentation.
 - [0016: Queryable run history](0016-queryable-run-history.md)
 - [0017: Shared credential filtering](0017-shared-credential-redaction.md)
 - [0018: Portable run archives](0018-portable-run-archives.md)
+- [0019: Pinned local task catalogs](0019-pinned-task-catalogs.md)

@@ -5,6 +5,9 @@ Changelog, and versions follow Semantic Versioning.
 
 ## [Unreleased]
 
+- Added portable pinned task catalogs, metadata filtering and drift diagnostics, and batch planning
+  with execution-time task fingerprint checks while retaining legacy unpinned manifests.
+
 - Added deterministic, sanitized run archives with bounded integrity verification, evidence
   association checks, exclusive atomic import, and offline report replay.
 

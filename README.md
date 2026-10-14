@@ -343,6 +343,9 @@ Detailed workflows: [CLI reference](docs/cli.md),
 
 ## Roadmap
 
+Curate repeatable evaluation sets with `repogym catalog create`, `catalog verify`, and
+`catalog batch`. See [Pinned task collections](docs/task-catalogs.md).
+
 Move execution evidence with `repogym archive export`, `archive verify`, and `archive import`.
 Archives support integrity-checked offline report replay. See [Run archives](docs/run-archives.md).
 

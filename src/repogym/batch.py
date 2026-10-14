@@ -30,8 +30,10 @@ from repogym.exceptions import (
 )
 from repogym.exit_codes import ExitCode
 from repogym.grader import grade_submission
+from repogym.loader import load_task
 from repogym.models import GradeResult, StrictModel
 from repogym.reports import load_run, render_sarif
+from repogym.reproducibility import task_fingerprint
 from repogym.security import redact_sensitive_text, redact_value
 
 BATCH_SCHEMA_VERSION = 1
@@ -59,6 +61,7 @@ class BatchJobSpec(StrictModel):
     id: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
     task: str = Field(min_length=1)
     submission: str = Field(min_length=1)
+    task_fingerprint: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
     @field_validator("task", "submission")
     @classmethod
@@ -225,6 +228,10 @@ def run_batch(
         submission = _resolve_job_path(base, job.submission)
         roots = (Path.cwd().resolve(), base, task, submission)
         try:
+            if job.task_fingerprint is not None:
+                actual = task_fingerprint(task, load_task(task))
+                if actual != job.task_fingerprint:
+                    raise BatchError("Pinned task fingerprint mismatch; execution refused")
             run_directory = grade_submission(
                 task,
                 submission,

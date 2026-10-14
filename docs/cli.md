@@ -40,6 +40,10 @@ Commands use the stable codes below. Put `--debug` before the subcommand to incl
 | `repogym archive export RUN OUTPUT` | sanitized run artifacts | no | new ZIP archive |
 | `repogym archive verify ARCHIVE` | complete archive | no | no |
 | `repogym archive import ARCHIVE --destination DIR` | verified archive | no | new run directory |
+| `repogym catalog create OUTPUT [--tasks-dir DIR]` | validated tasks | no | new pinned JSON catalog |
+| `repogym catalog list CATALOG [--query TEXT] [--format terminal\|json]` | saved catalog | no | no |
+| `repogym catalog verify CATALOG [--tasks-dir DIR]` | pinned tasks | no | no |
+| `repogym catalog batch CATALOG OUTPUT --submissions-dir DIR` | catalog and candidate layout | no | pinned batch manifest |
 
 `doctor` separates PASS, WARN, and FAIL checks and never starts the configured test command.
 `init-task` prompts for omitted ID/title unless `--non-interactive` is set, validates a staged

@@ -12,6 +12,9 @@ are upgraded in memory without rewriting their files; missing case data is marke
 
 ## Current guarantees
 
+Task catalogs curate a fixed input set. Generated batch jobs carry optional expected task
+fingerprints and reject drift before grading. See [Pinned task collections](task-catalogs.md).
+
 RepoGym fingerprints the complete task input surface, validates the bundled reference solution,
 and stores the fingerprint alongside structured execution evidence. A generic `python` or
 `python.exe` test command is resolved to the interpreter running RepoGym, which prevents an

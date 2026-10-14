@@ -2,6 +2,10 @@
 
 RepoGym uses a linear pipeline with small modules and explicit data models.
 
+`catalog` discovers and validates direct tasks, persists path-free pinned metadata, diagnoses
+drift, and plans relative batch manifests. Optional batch job fingerprints are checked before
+grading. Discovery, serialization, selection, and CLI are separate from execution backends.
+
 `archives` transfers execution evidence independently of task bundles. A flat versioned manifest
 binds artifacts to a run/task identity; import validates bytes, model associations, and privacy
 before exclusive atomic publication. Existing report and history APIs consume imported runs.
