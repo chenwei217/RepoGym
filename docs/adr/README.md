@@ -30,3 +30,4 @@ feature documentation.
 - [0019: Pinned local task catalogs](0019-pinned-task-catalogs.md)
 - [0020: Comparable repeated-run analysis](0020-repeat-run-stability-analysis.md)
 - [0021: Bounded parallel batch evaluation](0021-bounded-parallel-batches.md)
+- [0022: Enforced read-only history queries](0022-readonly-history-connections.md)

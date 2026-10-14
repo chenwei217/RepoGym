@@ -24,12 +24,23 @@ class RunIndex:
             raise HistoryError("Index may not be a link")
         connection = None
         try:
-            self.database.parent.mkdir(parents=True, exist_ok=True)
-            connection = sqlite3.connect(self.database, timeout=10)
+            if create:
+                self.database.parent.mkdir(parents=True, exist_ok=True)
+                connection = sqlite3.connect(self.database, timeout=10)
+            else:
+                uri = self.database.resolve().as_uri() + "?mode=ro"
+                connection = sqlite3.connect(uri, uri=True, timeout=10)
             version = connection.execute("PRAGMA user_version").fetchone()[0]
             if version not in (0, 1):
                 raise HistoryError("Unsupported run index schema version")
             if version == 0:
+                if not create:
+                    raise HistoryError("Run index is uninitialized; run runs refresh first")
+                existing = connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                ).fetchone()
+                if existing is not None:
+                    raise HistoryError("Unrecognized SQLite database; choose a separate run index")
                 connection.execute(
                     "CREATE TABLE runs (run_id TEXT PRIMARY KEY, task_id TEXT NOT NULL, "
                     "status TEXT NOT NULL, score REAL NOT NULL, "

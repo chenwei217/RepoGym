@@ -5,6 +5,9 @@ Changelog, and versions follow Semantic Versioning.
 
 ## [Unreleased]
 
+- Enforced read-only run-history queries, rejected accidental adoption of foreign SQLite files,
+  and closed test database connections explicitly to avoid delayed resource warnings.
+
 - Added bounded opt-in parallel batch workers, deterministic pair ordering, shared process
   cancellation, isolated path failures, and versioned scheduling policy evidence.
 

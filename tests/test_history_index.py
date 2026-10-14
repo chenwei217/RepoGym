@@ -1,5 +1,6 @@
 import sqlite3
 from collections.abc import Callable
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -48,7 +49,7 @@ def test_refresh_rolls_back_failed_transaction(run_factory: Callable[..., Path])
     run = run_factory()
     index = RunIndex(run.parent)
     index.refresh()
-    with sqlite3.connect(index.database) as connection:
+    with closing(sqlite3.connect(index.database)) as connection, connection:
         connection.execute(
             "CREATE TRIGGER reject_insert BEFORE INSERT ON runs "
             "BEGIN SELECT RAISE(ABORT, 'fixture'); END"
@@ -62,13 +63,13 @@ def test_versions_corruption_and_model_validation(run_factory: Callable[..., Pat
     run = run_factory()
     index = RunIndex(run.parent)
     index.refresh()
-    with sqlite3.connect(index.database) as connection:
+    with closing(sqlite3.connect(index.database)) as connection, connection:
         connection.execute("UPDATE runs SET summary='{}'")
     with pytest.raises(HistoryError, match="Corrupt"):
         index.query()
     with pytest.raises(HistoryError, match="Corrupt"):
         index.get("run-a")
-    with sqlite3.connect(index.database) as connection:
+    with closing(sqlite3.connect(index.database)) as connection, connection:
         connection.execute("PRAGMA user_version=99")
     with pytest.raises(HistoryError, match="Unsupported"):
         index.query()
@@ -87,3 +88,36 @@ def test_query_does_not_create_index_or_root(tmp_path: Path) -> None:
     with pytest.raises(HistoryError, match="refresh first"):
         index.query()
     assert not index.runs_root.exists()
+
+
+def test_existing_empty_database_is_not_initialized_by_a_query(tmp_path: Path) -> None:
+    database = tmp_path / "empty.sqlite3"
+    database.touch()
+    index = RunIndex(tmp_path, database)
+    with pytest.raises(HistoryError, match="uninitialized"):
+        index.query()
+    assert database.read_bytes() == b""
+
+
+def test_readonly_connections_and_foreign_database_preservation(
+    run_factory: Callable[..., Path],
+    tmp_path: Path,
+) -> None:
+    run = run_factory()
+    index = RunIndex(run.parent, tmp_path / "db space #1.sqlite3")
+    index.refresh()
+    with index._connect() as connection, pytest.raises(sqlite3.OperationalError, match="readonly"):
+        connection.execute("DELETE FROM runs")
+    assert len(index.query()) == 1
+    foreign = tmp_path / "foreign.sqlite3"
+    with closing(sqlite3.connect(foreign)) as connection, connection:
+        connection.execute("CREATE TABLE unrelated(value TEXT)")
+        connection.execute("INSERT INTO unrelated VALUES ('keep')")
+    other = RunIndex(run.parent, foreign)
+    with pytest.raises(HistoryError, match="Unrecognized"):
+        other.refresh()
+    with closing(sqlite3.connect(foreign)) as connection:
+        assert connection.execute("SELECT value FROM unrelated").fetchall() == [("keep",)]
+        assert connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall() == [("unrelated",)]

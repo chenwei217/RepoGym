@@ -1,5 +1,10 @@
 # Run history
 
+List/show connections are enforced read-only by SQLite and never initialize an existing empty
+database. Run `runs refresh` explicitly to initialize an index. Refresh refuses nonempty
+unversioned SQLite databases so a mistaken custom index path cannot adopt another application's
+tables. Spaces and URI-sensitive characters in index paths are supported.
+
 The run directories remain the source of truth. Refresh the disposable SQLite inventory after
 grading or importing runs; it does not execute tests or alter existing artifacts.
 
