@@ -68,7 +68,8 @@ def test_ci_has_least_privilege_pinned_actions_and_supported_python_matrix() -> 
         "3.13",
         "3.14",
     ]
-    assert test_job["strategy"]["matrix"]["os"] == ["ubuntu-latest", "windows-latest"]
+    assert test_job["strategy"]["matrix"]["os"] == ["ubuntu-24.04", "windows-latest"]
+    assert workflow["jobs"]["security"]["runs-on"] == "ubuntu-24.04"
 
     action_steps = [
         step["uses"] for job in workflow["jobs"].values() for step in job["steps"] if "uses" in step
@@ -108,6 +109,7 @@ def test_release_workflow_is_ci_gated_pinned_and_fail_closed() -> None:
         "types": ["completed"],
     }
     job = workflow["jobs"]["release"]
+    assert job["runs-on"] == "ubuntu-24.04"
     condition = job["if"]
     assert "conclusion == 'success'" in condition
     assert "event == 'push'" in condition

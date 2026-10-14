@@ -31,3 +31,4 @@ feature documentation.
 - [0020: Comparable repeated-run analysis](0020-repeat-run-stability-analysis.md)
 - [0021: Bounded parallel batch evaluation](0021-bounded-parallel-batches.md)
 - [0022: Enforced read-only history queries](0022-readonly-history-connections.md)
+- [0023: Explicit Linux verification baseline](0023-pinned-linux-verification-baseline.md)

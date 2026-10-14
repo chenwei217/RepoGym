@@ -5,6 +5,9 @@ Changelog, and versions follow Semantic Versioning.
 
 ## [Unreleased]
 
+- Pinned Linux test, security, and release jobs to the verified Ubuntu 24.04 baseline instead of
+  accepting unreviewed major-image changes through the floating latest alias.
+
 - Enforced read-only run-history queries, rejected accidental adoption of foreign SQLite files,
   and closed test database connections explicitly to avoid delayed resource warnings.
 
